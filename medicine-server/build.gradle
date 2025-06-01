@@ -15,43 +15,58 @@ java {
 	}
 }
 
-configurations {
-	compileOnly {
-		extendsFrom annotationProcessor
-	}
-}
-
 repositories {
 	mavenCentral()
 }
 
 dependencies {
+	// ───────────────────────────────────────────────────────────────────
 	// Spring Data JPA, Spring Web
+	// ───────────────────────────────────────────────────────────────────
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 
+	// ───────────────────────────────────────────────────────────────────
 	// Apache POI (Excel 처리용)
+	// ───────────────────────────────────────────────────────────────────
 	implementation 'org.apache.poi:poi:5.2.3'
 	implementation 'org.apache.poi:poi-ooxml:5.2.3'
 
-	// Lombok (필요 시)
-	compileOnly 'org.projectlombok:lombok'
-	annotationProcessor 'org.projectlombok:lombok'
+	// ───────────────────────────────────────────────────────────────────
+	// Lombok (JDK 21 지원 최신 버전으로 올리기)
+	// ───────────────────────────────────────────────────────────────────
+	compileOnly 'org.projectlombok:lombok:1.18.30'
+	annotationProcessor 'org.projectlombok:lombok:1.18.30'
 
-	// 개발 편의 도구(DevTools)
+	// ───────────────────────────────────────────────────────────────────
+	// DevTools (개발 편의 도구)
+	// ───────────────────────────────────────────────────────────────────
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
+	// ───────────────────────────────────────────────────────────────────
 	// MariaDB 드라이버
-	runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
+	// ───────────────────────────────────────────────────────────────────
+	runtimeOnly 'org.mariadb.jdbc:mariadb-java-client:2.7.4'
+	// 만약 MySQL 커넥터를 사용하고 싶다면 아래 줄을 활성화하세요.
+	// runtimeOnly 'mysql:mysql-connector-java:8.0.31'
 
-	// 테스트용 라이브러리
-	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	// ───────────────────────────────────────────────────────────────────
+	// JavaMailSender (이메일 전송)
+	// ───────────────────────────────────────────────────────────────────
+	implementation 'org.springframework.boot:spring-boot-starter-mail'
 
+	// ───────────────────────────────────────────────────────────────────
 	// Apache PDFBox (PDF 파싱/병합용)
+	// ───────────────────────────────────────────────────────────────────
 	implementation 'org.apache.pdfbox:pdfbox:2.0.29'
 	implementation 'org.apache.pdfbox:fontbox:2.0.29'
 	implementation 'org.apache.pdfbox:pdfbox-tools:2.0.29'
+
+	// ───────────────────────────────────────────────────────────────────
+	// 테스트 라이브러리
+	// ───────────────────────────────────────────────────────────────────
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 tasks.named('test') {

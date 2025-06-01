@@ -4,7 +4,8 @@ package com.onliner.medicine_server.controller;
 import com.onliner.medicine_server.entity.VendorClient;
 import com.onliner.medicine_server.repository.VendorClientRepository;
 import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.ss.usermodel.DateUtil;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,12 +13,14 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 
 @RestController
 @RequestMapping("/api/vendors/clients")
 @CrossOrigin(origins = "http://localhost:3000")
-
 public class VendorClientController {
 
     @Autowired
@@ -31,7 +34,6 @@ public class VendorClientController {
             List<VendorClient> byName = clientRepo.findByNameOriginalContainingIgnoreCase(q);
             List<VendorClient> byBiz  = clientRepo.findByBusinessNumberContaining(q);
 
-            // 세 리스트를 합치되, 순서를 유지하며 중복 제거
             Set<VendorClient> set = new LinkedHashSet<>();
             set.addAll(byCode);
             set.addAll(byName);
@@ -45,7 +47,6 @@ public class VendorClientController {
     @PostMapping
     public ResponseEntity<?> createClient(@RequestBody VendorClient client) {
         try {
-            // LocalDate 필드(dob, startDate)는 JSON 문자열 "YYYY-MM-DD"가 들어올 때 스프링이 자동 변환해 줍니다.
             VendorClient saved = clientRepo.save(client);
             return ResponseEntity.ok(saved);
         } catch (Exception e) {
@@ -66,7 +67,6 @@ public class VendorClientController {
         }
         VendorClient exist = opt.get();
 
-        // 모든 필드를 덮어쓰기하거나, 필요한 필드만 덮어써도 무방합니다.
         exist.setClassification(incoming.getClassification());
         exist.setCode(incoming.getCode());
         exist.setNameInternal(incoming.getNameInternal());
@@ -114,7 +114,7 @@ public class VendorClientController {
         return ResponseEntity.ok(exist);
     }
 
-    // 4) 엑셀 업로드 & 일괄 저장 (POST /api/vendors/clients/upload)
+    // 4) 엑셀 업로드 & 일괄 저장
     @PostMapping("/upload")
     public ResponseEntity<?> uploadExcel(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
@@ -123,23 +123,24 @@ public class VendorClientController {
         }
 
         try (InputStream is = file.getInputStream()) {
-            Workbook workbook = new XSSFWorkbook(is);
+            // .xls / .xlsx 모두 자동 감지해서 처리
+            Workbook workbook = WorkbookFactory.create(is);
             Sheet sheet = workbook.getSheetAt(0);
             List<VendorClient> listToSave = new ArrayList<>();
 
-            // 헤더는 0번 행, 데이터는 1번 행부터
+            // 헤더(0번 행) 이후부터 데이터(1번 행부터) 처리
             for (int i = 1; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
                 if (row == null) continue;
 
-                // 필수: “코드”(인덱스 1)가 비어 있으면 건너뛰기
+                // “코드”(인덱스 1)가 비어 있으면 건너뜀
                 Cell codeCell = row.getCell(1);
                 if (codeCell == null || codeCell.getCellType() == CellType.BLANK) {
                     continue;
                 }
                 String code = getCellStringValue(codeCell);
 
-                // 중복 검사: code 기준
+                // 중복 검사 (code 기준)
                 Optional<VendorClient> existing = clientRepo.findByCodeContainingIgnoreCase(code)
                         .stream().findFirst();
                 VendorClient entity = existing.orElseGet(VendorClient::new);
@@ -147,16 +148,46 @@ public class VendorClientController {
                     entity.setCode(code);
                 }
 
-                // 필드 매핑 (clientFields 배열 순서와 일치해야 합니다)
+                // ─── 필드 매핑 ──────────────────────────────────
                 entity.setClassification(getCellStringValue(row.getCell(0)));
                 entity.setNameInternal(getCellStringValue(row.getCell(2)));
                 entity.setNameOriginal(getCellStringValue(row.getCell(3)));
                 entity.setRepresentative(getCellStringValue(row.getCell(4)));
 
-                // 생년월일 (CellType.STRING 또는 CellType.NUMERIC 처리)
-                String dobStr = getCellStringValue(row.getCell(5));
-                if (!dobStr.isEmpty()) {
-                    entity.setDob(LocalDate.parse(dobStr));
+                // ▼▼▼ “dob” 처리 (5번 셀) ▼▼▼
+                Cell dobCell = row.getCell(5);
+                if (dobCell != null) {
+                    if (dobCell.getCellType() == CellType.NUMERIC && DateUtil.isCellDateFormatted(dobCell)) {
+                        // 엑셀 내부의 날짜 포맷(실제 Date)인 경우
+                        LocalDate dateVal = dobCell.getDateCellValue()
+                                .toInstant()
+                                .atZone(ZoneId.systemDefault())
+                                .toLocalDate();
+                        entity.setDob(dateVal);
+                    }
+                    else if (dobCell.getCellType() == CellType.STRING) {
+                        String dobStr = dobCell.getStringCellValue().trim();
+                        if (!dobStr.isEmpty()) {
+                            // “YYYY-MM-DD” 형식 시도
+                            try {
+                                LocalDate parsed = LocalDate.parse(dobStr);
+                                entity.setDob(parsed);
+                            } catch (DateTimeParseException ex1) {
+                                // 만약 “YYMMDD”（예: “110111”） 형태일 때
+                                if (dobStr.matches("\\d{6}")) {
+                                    try {
+                                        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyMMdd");
+                                        LocalDate parsed2 = LocalDate.parse(dobStr, fmt);
+                                        entity.setDob(parsed2);
+                                    } catch (DateTimeParseException ex2) {
+                                        // 위 둘 다 아니면 무시
+                                    }
+                                }
+                                // “20210907” 등 다른 패턴 처리가 필요하다면 여기에 추가
+                            }
+                        }
+                    }
+                    // 그 외(CellType.BLANK, BOOLEAN 등) 는 무시
                 }
 
                 entity.setBusinessNumber(getCellStringValue(row.getCell(6)));
@@ -186,6 +217,7 @@ public class VendorClientController {
                 entity.setManagerPhone(getCellStringValue(row.getCell(30)));
                 entity.setCreditLimit(getCellDoubleValue(row.getCell(31)));
 
+                // 숫자로 들어온 최대회전일, 월결재예상일 처리
                 Double maxTurn = getCellDoubleValue(row.getCell(32));
                 if (maxTurn != null) {
                     entity.setMaxTurnDays(maxTurn.intValue());
@@ -195,9 +227,36 @@ public class VendorClientController {
                     entity.setMonthlyEstimate(monthlyEst.intValue());
                 }
 
-                String startDateStr = getCellStringValue(row.getCell(34));
-                if (!startDateStr.isEmpty()) {
-                    entity.setStartDate(LocalDate.parse(startDateStr));
+                // ▼▼▼ “startDate” 처리 (34번 셀) ▼▼▼
+                Cell startCell = row.getCell(34);
+                if (startCell != null) {
+                    if (startCell.getCellType() == CellType.NUMERIC && DateUtil.isCellDateFormatted(startCell)) {
+                        LocalDate dateVal2 = startCell.getDateCellValue()
+                                .toInstant()
+                                .atZone(ZoneId.systemDefault())
+                                .toLocalDate();
+                        entity.setStartDate(dateVal2);
+                    }
+                    else if (startCell.getCellType() == CellType.STRING) {
+                        String startStr = startCell.getStringCellValue().trim();
+                        if (!startStr.isEmpty()) {
+                            try {
+                                LocalDate parsed = LocalDate.parse(startStr);
+                                entity.setStartDate(parsed);
+                            } catch (DateTimeParseException ex1) {
+                                if (startStr.matches("\\d{6}")) {
+                                    try {
+                                        DateTimeFormatter fmt2 = DateTimeFormatter.ofPattern("yyMMdd");
+                                        LocalDate parsed2 = LocalDate.parse(startStr, fmt2);
+                                        entity.setStartDate(parsed2);
+                                    } catch (DateTimeParseException ex2) {
+                                        // 무시
+                                    }
+                                }
+                                // 다른 패턴이 있다면 처리
+                            }
+                        }
+                    }
                 }
 
                 entity.setNote1(getCellStringValue(row.getCell(35)));
@@ -208,6 +267,7 @@ public class VendorClientController {
                 entity.setExternalExclude(getCellStringValue(row.getCell(40)).equalsIgnoreCase("true"));
                 entity.setPrePayment(getCellStringValue(row.getCell(41)).equalsIgnoreCase("true"));
 
+                // 42번 이후(입력자, 입력일자 등)은 사용하지 않으므로 굳이 읽지 않음
                 listToSave.add(entity);
             }
 
@@ -221,20 +281,19 @@ public class VendorClientController {
         }
     }
 
-    // ─── 헬퍼 메서드: 셀에서 문자열 읽기 ─────────────────────────────────
+    // ─── 헬퍼: 문자열로 읽기 ────────────────────────────────────────
     private String getCellStringValue(Cell cell) {
         if (cell == null) return "";
         if (cell.getCellType() == CellType.STRING) {
             return cell.getStringCellValue().trim();
         }
         if (cell.getCellType() == CellType.NUMERIC) {
-            // 날짜가 아닌 순수 숫자의 경우 long으로 캐스팅
             return String.valueOf((long) cell.getNumericCellValue());
         }
         return "";
     }
 
-    // ─── 헬퍼 메서드: 셀에서 숫자(Double)로 변환 ────────────────────────────────
+    // ─── 헬퍼: Double로 읽기 ───────────────────────────────────────
     private Double getCellDoubleValue(Cell cell) {
         if (cell == null) return 0.0;
         if (cell.getCellType() == CellType.STRING) {

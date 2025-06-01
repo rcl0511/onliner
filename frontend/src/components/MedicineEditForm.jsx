@@ -30,7 +30,6 @@ const MedicineEditForm = ({ initialData, onCancel, onSaved }) => {
 
   useEffect(() => {
     if (initialData) {
-      // 숫자는 문자열로 변환해서 input value에 넣어줌
       setFormData({
         supplier: initialData.supplier || '',
         manufacturer: initialData.manufacturer || '',
@@ -62,9 +61,10 @@ const MedicineEditForm = ({ initialData, onCancel, onSaved }) => {
     setFormData(prev => ({
       ...prev,
       [name]:
+        // 숫자 필드에만 숫자와 소수점(.)만 허용
         ['basePrice','prevStock','prevAmount','inQty','inAmount','outQty','outAmount','stockQty','purchasedQty','unitPrice','basePricePercent','stockAmount']
-          .includes(name) 
-          ? value.replace(/[^0-9\.]/g, '') 
+          .includes(name)
+          ? value.replace(/[^0-9.]/g, '') // → [^0-9.]로, 이스케이프 불필요
           : value
     }));
   };
@@ -98,13 +98,14 @@ const MedicineEditForm = ({ initialData, onCancel, onSaved }) => {
     };
 
     try {
-      const updated = await onSaved(initialData.id, payload);
+      // onSaved이 프로미스를 반환하므로, await만 해도 괜찮습니다.
+      await onSaved(initialData.id, payload);
       alert('수정이 완료되었습니다.');
-      setLoading(false);
-      onCancel(); // 또는 onSaved 이후에 부모가 다시 목록을 불러오도록 처리
+      onCancel();
     } catch (err) {
       console.error(err);
       alert('수정 중 오류가 발생했습니다: ' + err.message);
+    } finally {
       setLoading(false);
     }
   };
@@ -114,7 +115,7 @@ const MedicineEditForm = ({ initialData, onCancel, onSaved }) => {
       <div className="vendor-stock-form-container">
         <h3>재고 수정</h3>
         <form onSubmit={handleSubmit}>
-          {/* 필요한 input 필드를 모두 나열하세요 */}
+          {/* 예시 필드 */}
           <div className="form-group">
             <label>제품명</label>
             <input
@@ -162,6 +163,7 @@ const MedicineEditForm = ({ initialData, onCancel, onSaved }) => {
               onChange={handleChange}
             />
           </div>
+
           {/* … 나머지 필드들도 동일하게 추가 … */}
 
           <div className="form-buttons">

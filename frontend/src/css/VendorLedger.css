@@ -1,0 +1,158 @@
+.vl-container {
+  padding: 20px;
+}
+
+.vl-title {
+  margin-bottom: 16px;
+  font-size: 1.5rem;
+}
+
+.vl-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.vl-dropdown {
+  position: relative;
+}
+
+.vl-dropdown-input {
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* 드롭다운 리스트 예시 */
+.vl-dropdown-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 250px;
+  max-height: 200px;
+  overflow-y: auto;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  z-index: 10;
+}
+
+.vl-dropdown-item {
+  padding: 8px 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.vl-dropdown-item:hover {
+  background-color: #f5f5f5;
+}
+
+.vl-hospital-code {
+  color: #666;
+  font-size: 0.85rem;
+  margin-left: 4px;
+}
+
+.vl-date-range input[type="date"] {
+  padding: 4px 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+
+/* 테이블 컨테이너에 스크롤이 가능하도록 */
+.vl-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 20px;
+}
+
+/* 기본 테이블 스타일 */
+.vl-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  text-align: left;
+}
+
+/* 헤더 스타일 */
+.vl-table thead th {
+  background-color: #0062cc;
+  color: #fff;
+  padding: 8px 12px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+/* 본문 셀 스타일 */
+.vl-table tbody td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+/* 짝수/홀수 줄 배경색 */
+.vl-table tbody tr:nth-child(odd) {
+  background-color: #fafafa;
+}
+.vl-table tbody tr:nth-child(even) {
+  background-color: #fff;
+}
+
+/* 행 hover 시 강조 */
+.vl-table tbody tr:hover {
+  background-color: #f1faff;
+}
+
+/* 숫자 셀(우측 정렬) */
+.vl-table .right {
+  text-align: right;
+}
+
+/* Totals(합계) 행 스타일 */
+.vl-table tfoot tr {
+  background-color: #f0f0f0;
+  font-weight: bold;
+}
+.vl-table tfoot td {
+  padding: 10px 12px;
+  border-top: 2px solid #ccc;
+}
+
+/* 데이터가 없을 때 메시지 */
+.vl-nodata {
+  margin-top: 20px;
+  color: #555;
+  font-style: italic;
+}
+.vl-btn {
+  padding: 8px 16px;
+  background-color: #0062cc;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  transition: background-color 0.2s ease;
+}
+
+.vl-btn:hover {
+  background-color: #004bb5;
+}
+
+.vl-btn svg {
+  margin-right: 6px;
+}
+
+/* ===== 이 아래가 핵심: 버튼들을 한 줄에 붙이기 위한 flex 설정 ===== */
+.vl-btn-group {
+  display: flex;        /* 가로 정렬 */
+  gap: 12px;            /* 버튼 사이 간격 */
+  margin-top: 20px;     /* 위쪽 여백 */
+  align-items: center;  /* 세로 중앙 정렬 */
+  /* flex-wrap: nowrap;  // 필요에 따라 주석 해제 */
+}

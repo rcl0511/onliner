@@ -9,6 +9,7 @@ import VendorOrdersManagement  from './pages/VendorOrdersManagement';
 import VendorStocks            from './pages/VendorStocks';
 import VendorInvoice           from './pages/VendorInvoice';
 import VendorClientManagement  from './pages/VendorClientManagement';
+import VendorLedger                 from './pages/VendorLedger';
 import MainLayout              from './Layout/MainLayout';
 
 function App() {
@@ -26,7 +27,8 @@ function App() {
           <Route path="/vendor/orders"    element={<VendorOrdersManagement />} />
           <Route path="/vendor/stocks"    element={<VendorStocks />} />
           <Route path="/vendor/invoice"   element={<VendorInvoice />} />
-          <Route path="/vendor/clients"   element={<VendorClientManagement />} />  {/* 수정된 경로 */}
+          <Route path="/vendor/clients"   element={<VendorClientManagement />} />
+          <Route path="/vendor/trade"     element={<VendorLedger />} />  {/* 수정된 경로 */}
         </Route>
       </Routes>
     </BrowserRouter>

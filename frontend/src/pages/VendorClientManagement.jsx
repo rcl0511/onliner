@@ -89,6 +89,7 @@ export default function VendorClientManagement() {
     formData.append('file', excelFile);
 
     try {
+      // 반드시 /upload 엔드포인트로 multipart/form-data 요청 보내야 합니다.
       await axios.post(`${BASE_URL}/upload`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
@@ -96,6 +97,7 @@ export default function VendorClientManagement() {
       setExcelFile(null);
       loadClients();
     } catch (err) {
+      // 400: 파일이 누락되었거나, 잘못된 파라미터일 경우
       alert('엑셀 업로드 실패: ' + (err?.response?.data?.error || err.message));
     }
   };
@@ -112,6 +114,7 @@ export default function VendorClientManagement() {
   const handleSubmit = async e => {
     e.preventDefault();
     try {
+      // Content-Type: application/json 으로 JSON 바디 보내야 함
       await axios.post(BASE_URL, newClient);
       setShowForm(false);
       setNewClient(
@@ -126,7 +129,7 @@ export default function VendorClientManagement() {
     }
   };
 
-  // 4) 수정 버튼 클릭
+  // 4) 수정 화면 열기
   const handleEdit = client => {
     setEditClient({ ...client });
     setShowForm(false);
@@ -143,7 +146,7 @@ export default function VendorClientManagement() {
   const handleEditSubmit = async e => {
     e.preventDefault();
     try {
-      // ID 필드는 반드시 `id` 여야 합니다.
+      // PATCH /api/vendors/clients/{id}
       await axios.patch(`${BASE_URL}/${editClient.id}`, editClient);
       setEditClient(null);
       loadClients();
@@ -178,7 +181,7 @@ export default function VendorClientManagement() {
         <button className="btn" onClick={handleSearch}>검색</button>
       </div>
 
-      {/* 엑셀 업로드 & 신규 추가 버튼 */}
+      {/* 엑셀 업로드 & 신규 추가 */}
       <div className="top-actions">
         <input
           type="file"
