@@ -1,0 +1,88 @@
+.hospital-login-bg {
+  width: 100vw;
+  height: 100vh;
+  background: #F4F7FE;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.hospital-login-form {
+  width: 400px;
+  padding: 32px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.12);
+  display: flex;
+  flex-direction: column;
+}
+
+.hospital-login-title {
+  color: #3A6EA5;
+  font-size: 24px;
+  font-weight: 800;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.hospital-login-label {
+  margin-bottom: 8px;
+  color: #111827;
+  font-weight: 500;
+}
+
+.hospital-login-input {
+  width: 95%;
+  padding: 12px;
+  margin-bottom: 16px;
+  border: 1px solid #C7D2FE;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+.hospital-login-error {
+  color: #E94560;
+  margin-bottom: 12px;
+  text-align: center;
+  font-size: 15px;
+}
+
+.hospital-login-btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 16px;
+  border: none;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.hospital-login-btn.main {
+  background: #3A6EA5;
+  color: white;
+}
+
+.hospital-login-btn.main:hover {
+  background: #274c74;
+}
+
+.hospital-login-btn.sub {
+  background: #E5E7EB;
+  color: #111827;
+}
+
+.hospital-login-btn.sub:hover {
+  background: #D1D5DB;
+}
+
+.hospital-login-btn.link {
+  background: transparent;
+  color: #3A6EA5;
+  text-decoration: underline;
+  margin-bottom: 0;
+  padding: 0;
+  font-size: 15px;
+  border: none;
+}

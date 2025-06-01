@@ -1,0 +1,55 @@
+.vom-container {
+  padding: 24px;
+  font-family: 'Inter', sans-serif;
+  background: #fafcff;
+  min-height: 85vh;
+}
+.vom-title {
+  margin-bottom: 16px;
+  color: #475be8;
+  font-size: 22px;
+  font-weight: 700;
+}
+.vom-error {
+  color: #ef4444;
+  margin: 12px 0;
+}
+.vom-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(91,137,255,0.08);
+  font-size: 15px;
+}
+.vom-table th,
+.vom-table td {
+  padding: 10px 8px;
+  border: 1px solid #e6e6e6;
+  text-align: center;
+}
+.vom-table th {
+  background: #5b89ff;
+  color: white;
+  font-weight: 600;
+  font-size: 15px;
+}
+.vom-center {
+  text-align: center;
+  color: #666;
+}
+.vom-btn-accept {
+  background: #475be8;
+  color: #fff;
+  padding: 7px 18px;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+.vom-btn-accept:hover {
+  background: #2331b8;
+}

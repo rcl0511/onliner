@@ -1,0 +1,121 @@
+/* src/css/MainLayout.css */
+.mainlayout-root {
+  display: flex;
+  height: 100vh;
+  box-sizing: border-box;
+}
+.mainlayout-sidebar {
+  width: 260px;
+  background: #F8F8F8;
+  padding: 20px;
+  border-right: 1px solid #ECECEC;
+  display: flex;
+  flex-direction: column;
+}
+.mainlayout-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.mainlayout-logo-row {
+  display: flex;
+  align-items: center;
+}
+.mainlayout-logo-img {
+  width: 32px;
+  height: 24px;
+}
+.mainlayout-logo-title {
+  color: #475BE8;
+  font-size: 22px;
+  font-weight: 800;
+  font-family: 'Inter', 'Inter V', sans-serif;
+  margin-left: 10px;
+}
+.mainlayout-toggle {
+  cursor: pointer;
+  width: 24px;
+}
+.mainlayout-nav {
+  margin-top: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mainlayout-nav-item {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 16px;
+  color: #111827;
+  font-family: 'Inter V', 'Inter', sans-serif;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+.mainlayout-nav-item:hover {
+  background: #E5E7EB;
+}
+.mainlayout-footer {
+  margin-top: auto;
+  padding-top: 16px;
+}
+.mainlayout-footer-title {
+  font-size: 14px;
+  color: #6B7280;
+  font-family: 'Inter V', 'Inter', sans-serif;
+  margin-bottom: 8px;
+}
+.mainlayout-footer-link {
+  font-size: 16px;
+  color: #111827;
+  font-family: 'Inter V', 'Inter', sans-serif;
+  margin-bottom: 8px;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.mainlayout-footer-link:hover {
+  background: #E5E7EB;
+}
+.mainlayout-userinfo {
+  margin-top: 0;
+  padding-top: 16px;
+  border-top: 1px solid #ECECEC;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mainlayout-user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #E5E7EB;
+}
+.mainlayout-user-name {
+  color: #111827;
+  font-size: 14px;
+  font-family: 'Inter V', 'Inter', sans-serif;
+  font-weight: 400;
+  line-height: 24px;
+}
+.mainlayout-user-email {
+  color: #6B7280;
+  font-size: 12px;
+  font-family: 'Inter V', 'Inter', sans-serif;
+  font-weight: 400;
+  line-height: 16px;
+}
+.mainlayout-main {
+  flex: 1;
+  padding: 24px;
+}
+.mainlayout-menu-btn {
+  cursor: pointer;
+  margin-bottom: 12px;
+  font-size: 18px;
+  color: #475BE8;
+  user-select: none;
+}

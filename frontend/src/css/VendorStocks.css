@@ -1,0 +1,83 @@
+/* src/css/VendorStocks.css */
+
+/* 최상위 컨테이너 */
+.vendor-stocks-container {
+  background: #f4f6fa;
+  min-height: 100vh;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+/* 제목 */
+.vendor-stocks-title {
+  margin-bottom: 16px;
+  color: #333;
+}
+
+/* 엑셀 업로드 영역 (버튼 등) */
+.file-upload-area {
+  margin-bottom: 16px;
+}
+
+.file-upload-area input[type="file"] {
+  margin-right: 8px;
+}
+
+/* 테이블 기본 스타일 */
+.vendor-stocks-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* 테이블 헤드 */
+.vendor-stocks-table th {
+  background: #e8eaf6;
+  font-weight: 700;
+  padding: 10px;
+  border: 1px solid #cbd5e1;
+  color: #333;
+}
+
+/* 테이블 바디 셀 */
+.vendor-stocks-table td {
+  padding: 10px;
+  border: 1px solid #cbd5e1;
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* 짝수 행 배경색 */
+.vendor-stocks-table tr:nth-child(even) {
+  background: #f9f9ff;
+}
+
+/* 클릭 가능한 셀에 포인터 커서 */
+.clickable-cell {
+  cursor: pointer;
+}
+
+/* 인라인 입력창 스타일 */
+.inline-input {
+  width: 100px;
+  padding: 4px;
+  border: 1px solid #cbd5e1;
+  border-radius: 3px;
+  text-align: center;
+  font-size: 14px;
+  background-color: transparent; /* 평소에는 배경 투명하게 */
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+/* 입력창 포커스 시 */
+.inline-input:focus {
+  outline: none;
+  background-color: #fff;
+  border-color: #4caf50;
+}
+
+/* 저장 중(비활성화) 상태 */
+.inline-input:disabled {
+  background-color: #f0f0f0;
+  color: #888;
+  cursor: not-allowed;
+}
