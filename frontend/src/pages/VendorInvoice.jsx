@@ -1,5 +1,6 @@
 // src/components/VendorInvoice.jsx
 import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import '../css/VendorInvoice.css';
 
 
@@ -28,6 +29,9 @@ const VendorInvoice = () => {
 
   // (D) 전체 카드(수동 + 자동) 리스트 (임시: 저장 시 entry에 추가)
   const [manualEntries, setManualEntries] = useState([]);
+  const [selectedManual, setSelectedManual] = useState([]);
+  const [selectedAuto, setSelectedAuto] = useState([]);
+  const navigate = useNavigate();
 
 
 
@@ -146,11 +150,11 @@ const VendorInvoice = () => {
 
     // 새로운 항목 객체 생성
     const newEntry = {
+      key: Date.now().toString(),
       customer,
       invoiceDate,
       lineItems: [...lineItems],
       grandTotal: calculateGrandTotal(),
-      timestamp: Date.now(),
     };
 
     // 로컬 상태에 추가 (실제로는 백엔드 호출이 필요할 수 있음)
@@ -188,11 +192,30 @@ const VendorInvoice = () => {
         throw new Error(`서버 오류 ${res.status}\n${errText}`);
       }
       const { files: uploaded } = await res.json();
-      setResults(uploaded);
+      const withKeys = uploaded.map((f, idx) => ({ ...f, key: `${Date.now()}-${idx}` }));
+      setResults(withKeys);
     } catch (err) {
       console.error('다중 업로드 실패:', err);
       alert(`업로드 중 오류 발생: ${err.message}`);
     }
+  };
+
+  const toggleManual = (key) => {
+    setSelectedManual((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  };
+
+  const toggleAuto = (key) => {
+    setSelectedAuto((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  };
+
+  const handleGoDelivery = () => {
+    const manual = manualEntries.filter((e) => selectedManual.includes(e.key));
+    const auto = results.filter((r) => selectedAuto.includes(r.key));
+    navigate('/vendor/delivery', { state: { manual, auto } });
   };
   return (
     <div className="invoice-container">
@@ -325,36 +348,60 @@ const VendorInvoice = () => {
           <h3 className="section-heading">명세서 리스트</h3>
         )}
         <div className="cards-container">
-          {/* 수동 입력 */}
-          {manualEntries.map((entry, idx) => (
-            <div key={`manual-${idx}`} className="invoice-card">
-              <div className="card-header manual-tag">수동</div>
-              <div className="card-body">
-                <h4 className="card-title">
-                  {entry.invoiceDate} - {entry.customer}
-                </h4>
-                <div className="card-lines">
-                  {entry.lineItems.map((line, i) => (
-                    <p key={i} className="card-row">
-                      {line.productName} × {line.quantity} @{' '}
-                      {line.unitPrice.toLocaleString()} ={' '}
-                      {line.lineTotal.toLocaleString()}
-                    </p>
-                  ))}
-                </div>
-                <p className="card-row total-row">
-                  합계: {entry.grandTotal.toLocaleString()}원
-                </p>
-              </div>
-            </div>
-          ))}
+          {/* 4-1. 수동 입력 카드 */}
+          {manualEntries.map((entry) => {
+            const key = entry.key;
+            const checked = selectedManual.includes(key);
 
-          {/* PDF 파싱 결과 */}
-          {results.map((r, idx) => {
-            const filename = r.pdfUrl.split('/').pop();
             return (
-              <div key={`auto-${idx}`} className="invoice-card">
-                <div className="card-header auto-tag">자동</div>
+              <div key={key} className="invoice-card">
+                <div className="card-header manual-tag">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleManual(key)}
+                    style={{ marginRight: '8px' }}
+                  />
+                  <span>수동</span>
+                </div>
+                <div className="card-body">
+                  <h4 className="card-title">
+                    {entry.invoiceDate} - {entry.customer}
+                  </h4>
+                  <div className="card-lines">
+                    {entry.lineItems.map((line, i) => (
+                      <p key={i} className="card-row">
+                        {line.productName} × {line.quantity} @{' '}
+                        {line.unitPrice.toLocaleString()} ={' '}
+                        {line.lineTotal.toLocaleString()}
+                      </p>
+                    ))}
+                  </div>
+                  <p className="card-row total-row">
+                    합계: {entry.grandTotal.toLocaleString()}원
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* 4-2. PDF 파싱 결과 카드 */}
+          {results.map((r) => {
+            const filename = r.pdfUrl.split('/').pop();
+            const key = r.key;
+            const checked = selectedAuto.includes(key);
+
+            return (
+              <div key={key} className="invoice-card">
+                <div className="card-header auto-tag">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleAuto(key)}
+                    style={{ marginRight: '8px' }}
+                  />
+                  <span>자동</span>
+                </div>
                 <div className="card-body">
                   <h4 className="card-title">{r.originalName}</h4>
                   <p className="card-row">
@@ -379,6 +426,13 @@ const VendorInvoice = () => {
             );
           })}
         </div>
+        {(selectedManual.length > 0 || selectedAuto.length > 0) && (
+          <div className="form-actions" style={{ marginTop: '16px' }}>
+            <button type="button" className="btn-primary" onClick={handleGoDelivery}>
+              배송 관리로 이동
+            </button>
+          </div>
+        )}
       </section>
     </div>
   );
