@@ -37,6 +37,7 @@ const MainLayout = () => {
     navItem('배송관리', '/vendor/delivery'),
     navItem('명세서 발행', '/vendor/invoice'),
     navItem('거래장 조회', '/vendor/trade'),
+    navItem('명세서 조회', '/vendor/invoicesave'),
     navItem('거래처 관리', '/vendor/clients'),
     navItem('공지사항', '/vendor/alarms')
   ];

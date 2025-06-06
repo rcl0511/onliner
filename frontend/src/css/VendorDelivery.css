@@ -1,0 +1,135 @@
+/* container 전반 */
+.delivery-container {
+  padding: 1rem;
+  font-family: Arial, sans-serif;
+}
+
+.delivery-title {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+/* 왼쪽-오른쪽으로 나누어 배치 */
+.delivery-flex {
+  display: flex;
+  gap: 1rem;
+}
+
+/* ==================== */
+/* (A) PDF 목록 영역 */
+/* ==================== */
+.pdf-list-area {
+  flex: 1;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 0.5rem;
+  background-color: #fafafa;
+}
+
+.area-heading {
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+}
+
+/* PDF 카드 리스트 */
+.pdf-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* 개별 PDF 카드 */
+.pdf-card {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 0.5rem;
+  background-color: #fff;
+  cursor: grab;
+}
+
+.pdf-card:active {
+  cursor: grabbing;
+}
+
+.pdf-name {
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+}
+
+.pdf-link {
+  font-size: 0.9rem;
+  color: #007bff;
+  text-decoration: none;
+}
+
+/* ==================== */
+/* (B) 배송 기사 목록 영역 */
+/* ==================== */
+.drivers-area {
+  flex: 1;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 0.5rem;
+  background-color: #fafafa;
+}
+
+/* 기사 카드 컨테이너 */
+.driver-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* 개별 기사 카드 */
+.driver-card {
+  border: 2px dashed #bbb;
+  border-radius: 4px;
+  min-height: 100px;
+  padding: 0.5rem;
+  background-color: #fff;
+}
+
+/* 드롭 가능한 영역에 마우스가 올라가면 배경색 강조 (선택사항) */
+.driver-card:hover {
+  background-color: #f0f8ff;
+}
+
+.driver-name {
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+/* 기사에게 할당된 PDF 목록 */
+.assigned-pdfs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+}
+
+/* 할당된 PDF 아이템 */
+.assigned-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: #f9f9f9;
+}
+
+.assigned-name {
+  font-size: 0.9rem;
+}
+
+.assigned-link {
+  font-size: 0.8rem;
+  color: #007bff;
+  text-decoration: none;
+}
+
+/* “할당된 PDF 없음” 메시지 */
+.no-assigned {
+  font-size: 0.9rem;
+  color: #777;
+}

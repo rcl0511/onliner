@@ -1,48 +1,51 @@
 // src/components/VendorInvoice.jsx
 import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import '../css/VendorInvoice.css';
 
-
-  const getTodayDateString = () => {
+const getTodayDateString = () => {
   return new Date().toISOString().slice(0, 10);
 };
+
 const VendorInvoice = () => {
   // (A) 재고 정보(제품 목록 + 단가) 불러오기
-  const [stockItems, setStockItems] = useState([]); // { id, name, unitPrice, stockQty, ... }
+  const [stockItems, setStockItems] = useState([]); // { id, name, unitPrice }
   const [loadingStock, setLoadingStock] = useState(false);
 
   // (B) 수기 명세서 폼 상태
   const [invoiceHeader, setInvoiceHeader] = useState({
-    customer: '',    // 매출처
+    customer: '',             // 매출처
     invoiceDate: getTodayDateString(),
   });
-
-  // 라인 아이템 배열 (최소 1줄로 시작)
   const [lineItems, setLineItems] = useState([
-    { productId: '', productName: '', unitPrice: 0, quantity: '', lineTotal: 0 }
+    { productId: '', productName: '', unitPrice: 0, quantity: '', lineTotal: 0 },
   ]);
 
-  // (C) PDF 업로드 결과 상태 (기존 코드 유지)
+  // (C) PDF 업로드 결과 상태
   const [files, setFiles] = useState([]);
-  const [results, setResults] = useState([]);
+  const [results, setResults] = useState([]); // { originalName, pdfUrl, parsedText, key }
 
-  // (D) 전체 카드(수동 + 자동) 리스트 (임시: 저장 시 entry에 추가)
-  const [manualEntries, setManualEntries] = useState([]);
+  // (D) 수동으로 저장된 명세서 리스트
+  const [manualEntries, setManualEntries] = useState([]); // { key, customer, invoiceDate, lineItems, grandTotal }
+  
+  // (E) 체크박스 선택 상태
+  const [selectedManual, setSelectedManual] = useState([]); // ['manual-<key>', …]
+  const [selectedAuto, setSelectedAuto] = useState([]);     // ['auto-<key>', …]
 
+  const navigate = useNavigate();
 
-
+  // 초기 마운트 시 재고 정보 가져오기
   useEffect(() => {
     fetchStockItems();
   }, []);
 
-  // 1) 재고 API로부터 제품 목록 + 단가를 가져옴
+  // (A-1) 재고 API 호출
   const fetchStockItems = async () => {
     setLoadingStock(true);
     try {
       const res = await fetch('http://localhost:8080/api/medicines');
       if (!res.ok) throw new Error('재고 정보 조회 실패');
       const data = await res.json();
-      // data 배열에서 id, name, unitPrice 필드만 추출해 저장
       const items = data.map((m) => ({
         id: m.id,
         name: m.name,
@@ -57,7 +60,7 @@ const VendorInvoice = () => {
     }
   };
 
-  // 2) 수기 명세서 헤더 입력 핸들러
+  // (B-2) 수기 명세서 헤더 변경 핸들러
   const handleHeaderChange = (e) => {
     const { name, value } = e.target;
     setInvoiceHeader((prev) => ({
@@ -66,9 +69,8 @@ const VendorInvoice = () => {
     }));
   };
 
-  // 3) 라인 아이템에서 제품명 선택 시 단가 자동 채워주고, 총액 계산
+  // (B-3) 라인 아이템: 제품 선택 시 단가 채우고 초기화
   const handleLineProductChange = (index, selectedId) => {
-    // 선택된 제품 정보 찾기
     const selected = stockItems.find((i) => i.id.toString() === selectedId);
     setLineItems((prev) =>
       prev.map((line, idx) => {
@@ -78,18 +80,16 @@ const VendorInvoice = () => {
           productId: selected ? selected.id : '',
           productName: selected ? selected.name : '',
           unitPrice: selected ? selected.unitPrice : 0,
-          quantity: '',       // 수량 초기화
-          lineTotal: 0,       // 총액 초기화
+          quantity: '',
+          lineTotal: 0,
         };
       })
     );
   };
 
-  // 4) 라인 아이템에서 수량 변경 시 총액(lineTotal) 계산
+  // (B-4) 라인 아이템: 수량 변경 시 총액 계산
   const handleLineQtyChange = (index, qtyValue) => {
-    // 숫자로만, 빈 문자열도 허용
     const qtyClean = qtyValue === '' ? '' : qtyValue.replace(/[^0-9]/g, '');
-
     setLineItems((prev) =>
       prev.map((line, idx) => {
         if (idx !== index) return line;
@@ -104,26 +104,26 @@ const VendorInvoice = () => {
     );
   };
 
-  // 5) 라인 아이템 추가
+  // (B-5) 라인 아이템 추가
   const handleAddLine = () => {
     setLineItems((prev) => [
       ...prev,
-      { productId: '', productName: '', unitPrice: 0, quantity: '', lineTotal: 0 }
+      { productId: '', productName: '', unitPrice: 0, quantity: '', lineTotal: 0 },
     ]);
   };
 
-  // 6) 라인 아이템 삭제 (마지막 한 줄은 삭제하지 않음)
+  // (B-6) 라인 아이템 삭제 (최소 1줄 유지)
   const handleRemoveLine = (index) => {
-    if (lineItems.length === 1) return; // 최소 1줄 유지
+    if (lineItems.length === 1) return;
     setLineItems((prev) => prev.filter((_, idx) => idx !== index));
   };
 
-  // 7) 합계 금액 계산 (모든 lineTotal 합)
+  // (B-7) 합계 금액 계산
   const calculateGrandTotal = () => {
     return lineItems.reduce((sum, line) => sum + (line.lineTotal || 0), 0);
   };
 
-  // 8) 수기 명세서 “저장” 버튼 클릭 핸들러
+  // (B-8) 수기 명세서 저장 핸들러
   const handleManualSubmit = (e) => {
     e.preventDefault();
     const { customer, invoiceDate } = invoiceHeader;
@@ -132,7 +132,6 @@ const VendorInvoice = () => {
       return;
     }
 
-    // 각 라인이 유효한지 체크
     for (const line of lineItems) {
       if (!line.productId) {
         alert('제품을 선택해주세요.');
@@ -144,31 +143,27 @@ const VendorInvoice = () => {
       }
     }
 
-    // 새로운 항목 객체 생성
+    const newKey = Date.now().toString();
     const newEntry = {
+      key: newKey,
       customer,
       invoiceDate,
       lineItems: [...lineItems],
       grandTotal: calculateGrandTotal(),
-      timestamp: Date.now(),
     };
 
-    // 로컬 상태에 추가 (실제로는 백엔드 호출이 필요할 수 있음)
     setManualEntries((prev) => [newEntry, ...prev]);
-
-    // 폼 초기화
-    setInvoiceHeader({ customer: '', invoiceDate: '' });
-    setLineItems([
-      { productId: '', productName: '', unitPrice: 0, quantity: '', lineTotal: 0 }
-    ]);
+    setInvoiceHeader({ customer: '', invoiceDate: getTodayDateString() });
+    setLineItems([{ productId: '', productName: '', unitPrice: 0, quantity: '', lineTotal: 0 }]);
   };
 
-  // 9) PDF 업로드 핸들러 (기존 코드)
+  // (C-1) 파일 선택 시 실행
   const handleFileChange = (e) => {
     setFiles(Array.from(e.target.files));
   };
 
-    const handleUpload = async () => {
+  // (C-2) PDF 다중 업로드 핸들러
+  const handleUpload = async () => {
     if (files.length === 0) {
       alert('업로드할 PDF 파일을 선택하세요!');
       return;
@@ -178,7 +173,6 @@ const VendorInvoice = () => {
     files.forEach((f) => formData.append('invoices', f));
 
     try {
-      // ↓ 아래 URL을 Spring Boot 서버 주소와 맞춰 수정합니다.
       const res = await fetch('http://localhost:8080/api/invoices/upload-multiple', {
         method: 'POST',
         body: formData,
@@ -188,12 +182,49 @@ const VendorInvoice = () => {
         throw new Error(`서버 오류 ${res.status}\n${errText}`);
       }
       const { files: uploaded } = await res.json();
-      setResults(uploaded);
+      // uploaded: [{ id, originalName, pdfUrl, parsedText }, …]
+      const timestamp = Date.now();
+      const withKeys = uploaded.map((f, idx) => ({
+        ...f,
+        key: `auto-${timestamp}-${idx}`,
+      }));
+      setResults(withKeys);
     } catch (err) {
       console.error('다중 업로드 실패:', err);
       alert(`업로드 중 오류 발생: ${err.message}`);
     }
   };
+
+  // (E-1) manualEntries 또는 results 변경 시 기본 선택 상태 세팅
+  useEffect(() => {
+    const manualKeys = manualEntries.map((entry) => entry.key);
+    setSelectedManual(manualKeys);
+
+    const autoKeys = results.map((r) => r.key);
+    setSelectedAuto(autoKeys);
+  }, [manualEntries, results]);
+
+  // (E-2) 체크박스 토글: 수동
+  const toggleManual = (key) => {
+    setSelectedManual((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  };
+
+  // (E-3) 체크박스 토글: 자동
+  const toggleAuto = (key) => {
+    setSelectedAuto((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  };
+
+  // (E-4) 선택된 명세서를 배송 관리 페이지로 이동
+  const handleGoDelivery = () => {
+    const manual = manualEntries.filter((e) => selectedManual.includes(e.key));
+    const auto = results.filter((r) => selectedAuto.includes(r.key));
+    navigate('/vendor/delivery', { state: { manual, auto } });
+  };
+
   return (
     <div className="invoice-container">
       <h2 className="invoice-title">명세서 관리</h2>
@@ -228,9 +259,7 @@ const VendorInvoice = () => {
               <div key={idx} className="line-item-row">
                 <select
                   value={line.productId}
-                  onChange={(e) =>
-                    handleLineProductChange(idx, e.target.value)
-                  }
+                  onChange={(e) => handleLineProductChange(idx, e.target.value)}
                   disabled={loadingStock}
                 >
                   <option value="">-- 제품 선택 --</option>
@@ -250,9 +279,7 @@ const VendorInvoice = () => {
                 <input
                   type="number"
                   value={line.quantity}
-                  onChange={(e) =>
-                    handleLineQtyChange(idx, e.target.value)
-                  }
+                  onChange={(e) => handleLineQtyChange(idx, e.target.value)}
                   placeholder="수량"
                   min="0"
                 />
@@ -303,7 +330,7 @@ const VendorInvoice = () => {
         </form>
       </section>
 
-      {/* 2. PDF 업로드 섹션 (기존) */}
+      {/* 2. PDF 업로드 섹션 */}
       <section className="upload-section">
         <h3 className="section-heading">PDF 업로드 및 파싱</h3>
         <div className="upload-controls">
@@ -325,36 +352,60 @@ const VendorInvoice = () => {
           <h3 className="section-heading">명세서 리스트</h3>
         )}
         <div className="cards-container">
-          {/* 수동 입력 */}
-          {manualEntries.map((entry, idx) => (
-            <div key={`manual-${idx}`} className="invoice-card">
-              <div className="card-header manual-tag">수동</div>
-              <div className="card-body">
-                <h4 className="card-title">
-                  {entry.invoiceDate} - {entry.customer}
-                </h4>
-                <div className="card-lines">
-                  {entry.lineItems.map((line, i) => (
-                    <p key={i} className="card-row">
-                      {line.productName} × {line.quantity} @{' '}
-                      {line.unitPrice.toLocaleString()} ={' '}
-                      {line.lineTotal.toLocaleString()}
-                    </p>
-                  ))}
-                </div>
-                <p className="card-row total-row">
-                  합계: {entry.grandTotal.toLocaleString()}원
-                </p>
-              </div>
-            </div>
-          ))}
+          {/* 3-1. 수동 입력 카드 */}
+          {manualEntries.map((entry) => {
+            const key = entry.key;
+            const checked = selectedManual.includes(key);
 
-          {/* PDF 파싱 결과 */}
-          {results.map((r, idx) => {
-            const filename = r.pdfUrl.split('/').pop();
             return (
-              <div key={`auto-${idx}`} className="invoice-card">
-                <div className="card-header auto-tag">자동</div>
+              <div key={key} className="invoice-card">
+                <div className="card-header manual-tag">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleManual(key)}
+                    style={{ marginRight: '8px' }}
+                  />
+                  <span>수동</span>
+                </div>
+                <div className="card-body">
+                  <h4 className="card-title">
+                    {entry.invoiceDate} - {entry.customer}
+                  </h4>
+                  <div className="card-lines">
+                    {entry.lineItems.map((line, i) => (
+                      <p key={i} className="card-row">
+                        {line.productName} × {line.quantity} @{' '}
+                        {line.unitPrice.toLocaleString()} ={' '}
+                        {line.lineTotal.toLocaleString()}
+                      </p>
+                    ))}
+                  </div>
+                  <p className="card-row total-row">
+                    합계: {entry.grandTotal.toLocaleString()}원
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* 3-2. PDF 파싱 결과 카드 */}
+          {results.map((r) => {
+            const filename = r.pdfUrl.split('/').pop();
+            const key = r.key;
+            const checked = selectedAuto.includes(key);
+
+            return (
+              <div key={key} className="invoice-card">
+                <div className="card-header auto-tag">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleAuto(key)}
+                    style={{ marginRight: '8px' }}
+                  />
+                  <span>자동</span>
+                </div>
                 <div className="card-body">
                   <h4 className="card-title">{r.originalName}</h4>
                   <p className="card-row">
@@ -379,6 +430,15 @@ const VendorInvoice = () => {
             );
           })}
         </div>
+
+        {/* 4. 선택 항목 전송 버튼 */}
+        {(selectedManual.length > 0 || selectedAuto.length > 0) && (
+          <div className="form-actions" style={{ marginTop: '16px' }}>
+            <button type="button" className="btn-primary" onClick={handleGoDelivery}>
+              배송 관리로 이동
+            </button>
+          </div>
+        )}
       </section>
     </div>
   );
