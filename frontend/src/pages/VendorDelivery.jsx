@@ -1,10 +1,11 @@
+// src/pages/VendorDelivery.jsx
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import '../css/VendorDelivery.css';
 
 const VendorDelivery = () => {
     const location = useLocation();
-    const { manual = [], auto = [] } = location.state || {};
+    const { auto = [] } = location.state || {};
 
     const [pdfList, setPdfList] = useState([...auto]);
     const [drivers, setDrivers] = useState([]);
@@ -62,8 +63,6 @@ const VendorDelivery = () => {
                     );
                     if (!confirmRes) return;
 
-                    // 재할당 API가 없다면, 기존 할당 삭제 API를 먼저 호출해야 함
-                    // 여기선 그냥 사용자에게 안내만 함
                     alert('죄송합니다. 현재는 재할당을 지원하지 않습니다.\n관리자에게 문의해주세요.');
                     return;
                 } else {
@@ -71,7 +70,6 @@ const VendorDelivery = () => {
                 }
             }
 
-            // 상태 업데이트
             setAssignments((prev) => {
                 const updated = { ...prev };
                 updated[driverId] = [...(updated[driverId] || []), pdf.key];
@@ -119,14 +117,14 @@ const VendorDelivery = () => {
                                         draggable={true}
                                         onDragStart={(e) => handleDragStart(e, r)}
                                     >
-                                        <p className="pdf-name">{r.originalName}</p>
+                                        <p className="pdf-name">{r.fileName}</p>
                                         <a
-                                            href={`http://localhost:8080${r.pdfUrl}`} // 반드시 8080 포트에서 제공
-                                            download={filename}
+                                            href={`http://localhost:8080${r.pdfUrl}`}
+                                            download={r.fileName}
                                             target="_blank"
                                             rel="noreferrer"
                                         >
-                                            {filename}
+                                            {r.fileName}
                                         </a>
                                     </div>
                                 );
@@ -160,7 +158,7 @@ const VendorDelivery = () => {
                                                     <div key={pdfKey} className="assigned-item">
                                                         <span className="assigned-name">{pdfObj.originalName}</span>
                                                         <a
-                                                            href={pdfObj.pdfUrl}
+                                                            href={`http://localhost:8080${pdfObj.pdfUrl}`}
                                                             download={fname}
                                                             target="_blank"
                                                             rel="noreferrer"

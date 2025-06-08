@@ -27,7 +27,7 @@ const VendorInvoice = () => {
 
   // (D) 수동으로 저장된 명세서 리스트
   const [manualEntries, setManualEntries] = useState([]); // { key, customer, invoiceDate, lineItems, grandTotal }
-  
+
   // (E) 체크박스 선택 상태
   const [selectedManual, setSelectedManual] = useState([]); // ['manual-<key>', …]
   const [selectedAuto, setSelectedAuto] = useState([]);     // ['auto-<key>', …]
@@ -187,6 +187,7 @@ const VendorInvoice = () => {
       const withKeys = uploaded.map((f, idx) => ({
         ...f,
         key: `auto-${timestamp}-${idx}`,
+        fileName: f.pdfFileName || f.pdfUrl.split('/').pop(),
       }));
       setResults(withKeys);
     } catch (err) {
@@ -411,8 +412,8 @@ const VendorInvoice = () => {
                   <p className="card-row">
                     생성된 PDF:{' '}
                     <a
-                      href={`http://localhost:5000${r.pdfUrl}`}
-                      download={filename}
+                      href={`http://localhost:8080${r.pdfUrl}`}
+                      download  // ✅ 이 속성이 핵심입니다!
                       target="_blank"
                       rel="noreferrer"
                     >
