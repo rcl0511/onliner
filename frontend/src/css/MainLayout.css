@@ -119,3 +119,29 @@
   color: #475BE8;
   user-select: none;
 }
+
+.mainlayout-nav-item.active,
+.mainlayout-footer-link.active {
+  background: rgba(0,0,0,0.06);
+  font-weight: 700;
+}
+
+.mainlayout-user-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mainlayout-logout {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: #fff;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.mainlayout-logout:hover {
+  background: rgba(0,0,0,0.04);
+}
+
