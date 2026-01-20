@@ -1,6 +1,6 @@
 // src/components/VendorInvoice.jsx
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import '../css/VendorInvoice.css';
 
 const getTodayDateString = () => {
@@ -46,7 +46,7 @@ const VendorInvoice = () => {
   useEffect(() => {
     fetchStockItems();
     fetchClients();
-  }, []);
+  }, [fetchStockItems, fetchClients]);
 
   // 거래처 변경 시 이력 불러오기
   useEffect(() => {
@@ -70,7 +70,7 @@ const VendorInvoice = () => {
   };
 
   // (A-1) 재고 API 호출
-  const fetchStockItems = async () => {
+  const fetchStockItems = useCallback(async () => {
     setLoadingStock(true);
     try {
       const res = await fetch(`${API_BASE}/api/medicines`);
@@ -93,10 +93,10 @@ const VendorInvoice = () => {
     } finally {
       setLoadingStock(false);
     }
-  };
+  }, [API_BASE]);
 
   // 거래처 목록 조회 (테스트 데이터)
-  const fetchClients = async () => {
+  const fetchClients = useCallback(async () => {
     // 실제 DB 대신 테스트 데이터 사용
     const testClients = [
       { id: 1, nameOriginal: '테스트병원A', nameInternal: '테스트병원A', code: 'TEST001' },
@@ -106,7 +106,7 @@ const VendorInvoice = () => {
       { id: 5, nameOriginal: '테스트병원E', nameInternal: '테스트병원E', code: 'TEST005' },
     ];
     setClients(testClients);
-  };
+  }, []);
 
   // 과거 주문 이력 조회
   const fetchOrderHistory = async (customerId) => {

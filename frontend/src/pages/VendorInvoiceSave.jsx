@@ -3,7 +3,6 @@ import '../css/common.css';
 
 export default function VendorInvoiceSave() {
   const [invoices, setInvoices] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [dateFilter, setDateFilter] = useState({
@@ -12,7 +11,6 @@ export default function VendorInvoiceSave() {
   });
 
   useEffect(() => {
-    setLoading(true);
     const mockInvoices = [
       { id: 1, invoiceNumber: 'INV-2406-001', customer: '테스트병원A', date: '2024-06-18', amount: 4500000, status: 'CONFIRMED' },
       { id: 2, invoiceNumber: 'INV-2406-002', customer: '테스트병원B', date: '2024-06-17', amount: 1200000, status: 'PENDING' },
@@ -21,7 +19,6 @@ export default function VendorInvoiceSave() {
       { id: 5, invoiceNumber: 'INV-2406-005', customer: '테스트병원E', date: '2024-06-13', amount: 2100000, status: 'PENDING' },
     ];
     setInvoices(mockInvoices);
-    setLoading(false);
   }, []);
 
   const filteredInvoices = useMemo(() => {

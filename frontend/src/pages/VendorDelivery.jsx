@@ -1,5 +1,5 @@
 // src/pages/VendorDelivery.jsx
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import '../css/VendorDelivery.css';
 import '../css/common.css';
@@ -21,45 +21,31 @@ const VendorDelivery = () => {
     // 구글 맵 API 키 (사용자 제공)
     const GOOGLE_MAPS_API_KEY = 'AIzaSyCeAo-v9T_jpuvDn8kwpWtl8f0KOnnLXuc';
 
-    useEffect(() => {
-        fetchDrivers();
-        loadGoogleMaps();
-        const interval = setInterval(fetchDriverLocations, 5000);
-        return () => {
-            clearInterval(interval);
-            markersRef.current.forEach(marker => marker.setMap(null));
-        };
-    }, []);
+    const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080';
 
-    const loadGoogleMaps = () => {
-        if (window.google && window.google.maps) {
-            initMap();
-            return;
+    const fetchDrivers = useCallback(async () => {
+        try {
+            const res = await fetch(`${API_BASE}/api/drivers`);
+            const data = res.ok ? await res.json() : [];
+            setDrivers(data);
+            const initial = {};
+            const mockLocs = {};
+            data.forEach((d) => {
+                initial[d.id] = [];
+                mockLocs[d.id] = {
+                    lat: 37.5665 + (Math.random() - 0.5) * 0.1,
+                    lng: 126.9780 + (Math.random() - 0.5) * 0.1,
+                    status: ['배송중', '대기중'][Math.floor(Math.random() * 2)]
+                };
+            });
+            setAssignments(initial);
+            setDriverLocations(mockLocs);
+        } catch (err) {
+            console.error(err);
         }
-        const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=geometry`;
-        script.async = true;
-        script.defer = true;
-        script.onload = initMap;
-        document.head.appendChild(script);
-    };
+    }, [API_BASE]);
 
-    const initMap = () => {
-        if (!mapRef.current || !window.google) return;
-        const map = new window.google.maps.Map(mapRef.current, {
-            center: { lat: 37.5665, lng: 126.9780 },
-            zoom: 12,
-            disableDefaultUI: false,
-            styles: [
-                { featureType: "poi", stylers: [{ visibility: "off" }] },
-                { featureType: "transit", stylers: [{ visibility: "off" }] }
-            ]
-        });
-        mapInstanceRef.current = map;
-        updateMarkers();
-    };
-
-    const updateMarkers = () => {
+    const updateMarkers = useCallback(() => {
         if (!mapInstanceRef.current || !window.google) return;
         markersRef.current.forEach(m => m.setMap(null));
         markersRef.current = [];
@@ -124,35 +110,49 @@ const VendorDelivery = () => {
 
             markersRef.current.push(marker);
         });
-    };
+    }, [driverLocations, drivers]);
+
+    const initMap = useCallback(() => {
+        if (!mapRef.current || !window.google) return;
+        const map = new window.google.maps.Map(mapRef.current, {
+            center: { lat: 37.5665, lng: 126.9780 },
+            zoom: 12,
+            disableDefaultUI: false,
+            styles: [
+                { featureType: "poi", stylers: [{ visibility: "off" }] },
+                { featureType: "transit", stylers: [{ visibility: "off" }] }
+            ]
+        });
+        mapInstanceRef.current = map;
+        updateMarkers();
+    }, [updateMarkers]);
+
+    const loadGoogleMaps = useCallback(() => {
+        if (window.google && window.google.maps) {
+            initMap();
+            return;
+        }
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=geometry`;
+        script.async = true;
+        script.defer = true;
+        script.onload = initMap;
+        document.head.appendChild(script);
+    }, [GOOGLE_MAPS_API_KEY, initMap]);
+
+    useEffect(() => {
+        fetchDrivers();
+        loadGoogleMaps();
+        const interval = setInterval(fetchDriverLocations, 5000);
+        return () => {
+            clearInterval(interval);
+            markersRef.current.forEach(marker => marker.setMap(null));
+        };
+    }, [fetchDrivers, loadGoogleMaps]);
 
     useEffect(() => {
         updateMarkers();
-    }, [driverLocations, drivers]);
-
-    const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080';
-
-    const fetchDrivers = async () => {
-        try {
-            const res = await fetch(`${API_BASE}/api/drivers`);
-            const data = res.ok ? await res.json() : [];
-            setDrivers(data);
-            const initial = {};
-            const mockLocs = {};
-            data.forEach((d) => {
-                initial[d.id] = [];
-                mockLocs[d.id] = {
-                    lat: 37.5665 + (Math.random() - 0.5) * 0.1,
-                    lng: 126.9780 + (Math.random() - 0.5) * 0.1,
-                    status: ['배송중', '대기중'][Math.floor(Math.random() * 2)]
-                };
-            });
-            setAssignments(initial);
-            setDriverLocations(mockLocs);
-        } catch (err) {
-            console.error(err);
-        }
-    };
+    }, [updateMarkers]);
 
     const fetchDriverLocations = () => {
         setDriverLocations(prev => {

@@ -4,7 +4,6 @@ import '../css/common.css';
 
 const VendorOrdersManagement = () => {
     const [orders, setOrders] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [selectedOrders, setSelectedOrders] = useState(new Set());
@@ -14,9 +13,8 @@ const VendorOrdersManagement = () => {
             .then(res => res.json())
             .then(data => {
                 setOrders(data);
-                setLoading(false);
             })
-            .catch(() => setLoading(false));
+            .catch(() => {});
     }, []);
 
     const filteredOrders = useMemo(() => {
