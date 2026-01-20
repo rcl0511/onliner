@@ -28,12 +28,43 @@ import Community from "./pages/Community";
 import Permissions from "./pages/Permissions";
 import SettingsGeneral from "./pages/SettingsGeneral";
 
+// 루트 경로에서 로그인 상태 확인 후 리다이렉트
+function RootRedirect() {
+  let user = {};
+  try {
+    user = JSON.parse(localStorage.getItem("userInfo")) || {};
+  } catch {
+    user = {};
+  }
+
+  // 로그인되어 있으면 해당 역할의 대시보드로
+  if (user && user.role) {
+    if (user.role === "vendor") {
+      return <Navigate to="/vendor/dashboard" replace />;
+    } else if (user.role === "hospital") {
+      return <Navigate to="/hospital/dashboard" replace />;
+    }
+  }
+
+  // 로그인되지 않았으면 자동으로 테스트 계정으로 로그인 처리
+  const autoLoginUser = {
+    email: 'master@dh-pharm.com',
+    role: 'vendor',
+    companyCode: 'dh-pharm',
+    permission: 'MASTER',
+    name: '대표 관리자',
+    companyName: 'DH약품'
+  };
+  localStorage.setItem('userInfo', JSON.stringify(autoLoginUser));
+  return <Navigate to="/vendor/dashboard" replace />;
+}
+
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* 첫 진입 */}
-        <Route path="/" element={<Navigate to="/hospital/login" replace />} />
+        {/* 첫 진입 - 로그인 상태 확인 후 리다이렉트 */}
+        <Route path="/" element={<RootRedirect />} />
 
         {/* 로그인(레이아웃 없음) */}
         <Route path="/hospital/login" element={<HospitalLogin />} />
