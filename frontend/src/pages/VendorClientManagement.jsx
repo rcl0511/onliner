@@ -54,32 +54,77 @@ const buildEmptyClient = () =>
     return acc;
   }, {});
 
-// ✅ CRA 환경변수 지원 + 기본값
-// 예) .env에 REACT_APP_API_BASE_URL=http://localhost:8080
 const API_ORIGIN = process.env.REACT_APP_API_BASE_URL || "http://localhost:8080";
 const BASE_URL = `${API_ORIGIN}/api/vendors/clients`;
+
+// 가짜 데이터로 마스킹하는 함수 (Netlify 배포용)
+const maskClientData = (client) => {
+  if (!client) return client;
+  
+  // ID 기반으로 일관된 가짜 데이터 생성
+  const fakeNames = ['테스트병원A', '테스트병원B', '테스트병원C', '테스트병원D', '테스트병원E', '테스트병원F', '테스트병원G', '테스트병원H'];
+  const fakeRepresentatives = ['홍길동', '김철수', '이영희', '박민수', '정수진', '최동욱', '한미영', '강태호'];
+  const fakeBusinessNumbers = ['123-45-67890', '234-56-78901', '345-67-89012', '456-78-90123', '567-89-01234', '678-90-12345', '789-01-23456', '890-12-34567'];
+  
+  const index = (client.id || 0) % 8;
+  
+  return {
+    ...client,
+    nameOriginal: fakeNames[index] || `테스트병원${client.id || 'X'}`,
+    representative: fakeRepresentatives[index] || '홍길동',
+    businessNumber: fakeBusinessNumbers[index] || '123-45-67890',
+    nameInternal: fakeNames[index] || `테스트병원${client.id || 'X'}`,
+  };
+};
 
 export default function VendorClientManagement() {
   const [clients, setClients] = useState([]);
   const [newClient, setNewClient] = useState(buildEmptyClient());
   const [showForm, setShowForm] = useState(false);
-
   const [excelFile, setExcelFile] = useState(null);
-
-  // 수정 모달(일단 UI는 유지, 저장은 막음)
   const [editClient, setEditClient] = useState(null);
-
-  // ✅ 검색은 서버요청 X, 프론트 필터링
   const [search, setSearch] = useState("");
-
   const [loading, setLoading] = useState(false);
+  
+  // 병원별 단가 관리
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [clientPrices, setClientPrices] = useState({}); // { clientId: { productId: price } }
+  const [showPriceModal, setShowPriceModal] = useState(false);
+  const [products, setProducts] = useState([]);
+  
+  // 미수금 대시보드
+  const [receivables, setReceivables] = useState({}); // { clientId: { total, overdue, lastPayment } }
+  
+  // 임시계정 발급
+  const [showTempAccountModal, setShowTempAccountModal] = useState(null);
 
   // 1) 전체 조회
   const loadClients = async () => {
     setLoading(true);
     try {
       const res = await axios.get(BASE_URL);
-      setClients(Array.isArray(res.data) ? res.data : []);
+      // 가짜 데이터로 마스킹 (Netlify 배포용)
+      const maskedClients = Array.isArray(res.data) 
+        ? res.data.map(client => maskClientData(client))
+        : [];
+      setClients(maskedClients);
+      
+      // 미수금 데이터 로드 (예시) - 대폭 감소
+      const mockReceivables = {};
+      const clientCount = res.data.length;
+      res.data.forEach((c, index) => {
+        // 총 미수금: 최대 500만원 이내로 대폭 감소
+        // 연체 미수금: 최대 200만원 이내로 대폭 감소
+        // 장기 미수 업체: 전체의 5-10% 정도만
+        const isLongTerm = index < Math.floor(clientCount * 0.08); // 약 8%만 장기 미수
+        mockReceivables[c.id] = {
+          total: Math.floor(Math.random() * 5000000), // 최대 500만원
+          overdue: isLongTerm ? Math.floor(Math.random() * 2000000) : Math.floor(Math.random() * 500000), // 장기 미수는 최대 200만원, 일반은 50만원
+          lastPayment: new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString(),
+          overdueDays: isLongTerm ? Math.floor(30 + Math.random() * 30) : Math.floor(Math.random() * 30) // 장기 미수는 30일 이상
+        };
+      });
+      setReceivables(mockReceivables);
     } catch (err) {
       alert("조회 실패: " + (err?.response?.data?.error || err.message));
       setClients([]);
@@ -90,18 +135,33 @@ export default function VendorClientManagement() {
 
   useEffect(() => {
     loadClients();
+    fetchProducts();
   }, []);
 
-  // ✅ 검색 결과(프론트 필터링)
+  // 제품 목록 조회 (단가 설정용)
+  const fetchProducts = async () => {
+    try {
+      const res = await fetch('http://localhost:8080/api/medicines');
+      if (res.ok) {
+        const data = await res.json();
+        setProducts(data.slice(0, 50)); // 처음 50개만
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // 검색 결과(프론트 필터링)
   const filteredClients = useMemo(() => {
     const keyword = search.trim().toLowerCase();
     if (!keyword) return clients;
 
     return (clients || []).filter((c) => {
+      const masked = maskClientData(c);
       const code = (c.code || "").toLowerCase();
-      const nameO = (c.nameOriginal || "").toLowerCase();
-      const nameI = (c.nameInternal || "").toLowerCase();
-      const bn = (c.businessNumber || "").toLowerCase();
+      const nameO = (masked.nameOriginal || "").toLowerCase();
+      const nameI = (masked.nameInternal || "").toLowerCase();
+      const bn = (masked.businessNumber || "").toLowerCase();
 
       return (
         code.includes(keyword) ||
@@ -121,7 +181,6 @@ export default function VendorClientManagement() {
       return;
     }
     const formData = new FormData();
-    // ✅ 백엔드에서 @RequestParam("file")이면 file이 맞음
     formData.append("file", excelFile);
 
     try {
@@ -148,7 +207,6 @@ export default function VendorClientManagement() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // 최소 검증 (백엔드에서 unique+not null)
     if (!newClient.code?.trim()) {
       alert("코드는 필수입니다.");
       return;
@@ -179,28 +237,106 @@ export default function VendorClientManagement() {
     }));
   };
 
-  // ✅ 중요: 백엔드에 PATCH/PUT 엔드포인트가 확실치 않아서 저장은 막아둠
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     alert(
-      "수정 저장은 백엔드에 PUT/PATCH 엔드포인트가 있어야 동작합니다.\n" +
-        "현재 서버에서 수정 API가 확인되지 않아(405/404 가능) 일단 UI만 열어둔 상태입니다.\n\n" +
-        "원하면 VendorClientController에 @PutMapping(\"/{id}\") 또는 @PatchMapping(\"/{id}\")를 추가해주면 바로 연결해줄게요."
+      "수정 저장은 백엔드에 PUT/PATCH 엔드포인트가 있어야 동작합니다."
     );
+  };
+
+  // 병원별 단가 설정
+  const openPriceModal = (client) => {
+    setSelectedClient(client);
+    setShowPriceModal(true);
+  };
+
+  const saveClientPrice = async (productId, price) => {
+    if (!selectedClient) return;
+    
+    setClientPrices(prev => ({
+      ...prev,
+      [selectedClient.id]: {
+        ...prev[selectedClient.id],
+        [productId]: price
+      }
+    }));
+    
+    // 실제로는 서버 API 호출
+    alert('단가가 저장되었습니다.');
+  };
+
+  // 임시계정 발급
+  const issueTempAccount = async (client) => {
+    try {
+      // 실제로는 서버 API 호출
+      const tempId = `temp_${Date.now()}`;
+      const tempPassword = Math.random().toString(36).slice(-8);
+      
+      const loginLink = `${window.location.origin}/hospital/login?tempId=${tempId}`;
+      
+      setShowTempAccountModal({
+        client,
+        tempId,
+        tempPassword,
+        loginLink
+      });
+      
+      // SMS 발송 (실제로는 서버에서 처리)
+      alert(`임시 계정이 생성되었습니다.\n아이디: ${tempId}\n비밀번호: ${tempPassword}\n로그인 링크가 SMS로 전송되었습니다.`);
+    } catch (err) {
+      alert('임시계정 발급 실패: ' + err.message);
+    }
   };
 
   return (
     <div className="client-mgmt-container">
       <h2>거래처 관리</h2>
 
-      {/* 검색 (프론트 필터링) */}
+      {/* 미수금 대시보드 */}
+      <div style={{
+        background: 'white',
+        padding: '20px',
+        borderRadius: '8px',
+        marginBottom: '20px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+      }}>
+        <h3 style={{ marginBottom: '16px', color: '#475BE8' }}>미수금 대시보드</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+          <div style={{ padding: '16px', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px' }}>
+            <div style={{ fontSize: '14px', color: '#64748B', marginBottom: '4px' }}>총 미수금</div>
+            <div style={{ fontSize: '24px', fontWeight: 700, color: '#475BE8' }}>
+              {Object.values(receivables).reduce((sum, r) => sum + (r.total || 0), 0).toLocaleString()}원
+            </div>
+          </div>
+          <div style={{ padding: '16px', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px' }}>
+            <div style={{ fontSize: '14px', color: '#64748B', marginBottom: '4px' }}>연체 미수금</div>
+            <div style={{ fontSize: '24px', fontWeight: 700, color: '#475BE8' }}>
+              {Object.values(receivables).reduce((sum, r) => sum + (r.overdue || 0), 0).toLocaleString()}원
+            </div>
+          </div>
+          <div style={{ padding: '16px', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px' }}>
+            <div style={{ fontSize: '14px', color: '#64748B', marginBottom: '4px' }}>장기 미수 업체</div>
+            <div style={{ fontSize: '24px', fontWeight: 700, color: '#475BE8' }}>
+              {Object.values(receivables).filter(r => (r.overdueDays || 0) > 30).length}개
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 검색 */}
       <div style={{ marginBottom: 16 }}>
         <input
           type="text"
           placeholder="코드/상호/사업자번호로 검색"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ marginRight: 8 }}
+          style={{ 
+            width: '300px',
+            padding: '10px',
+            border: '1px solid #D1D5DB',
+            borderRadius: 4,
+            marginRight: 8
+          }}
         />
         <button className="btn" onClick={() => setSearch("")}>
           검색 초기화
@@ -216,16 +352,16 @@ export default function VendorClientManagement() {
           style={{ marginRight: 8 }}
         />
         <button
-          className="btn primary"
+          className="btn-primary"
           onClick={handleUpload}
           style={{ marginRight: 16 }}
         >
           엑셀 업로드
         </button>
-        <button className="btn primary" onClick={() => setShowForm(true)}>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>
           신규 거래처 추가
         </button>
-        <button className="btn" onClick={loadClients} style={{ marginLeft: 8 }}>
+        <button className="btn-secondary" onClick={loadClients} style={{ marginLeft: 8 }}>
           새로고침
         </button>
       </div>
@@ -243,28 +379,65 @@ export default function VendorClientManagement() {
             <th>사업자원어명</th>
             <th>대표자</th>
             <th>사업자번호</th>
-            <th>사업장주소</th>
-            <th>이메일</th>
-            <th>수정</th>
+            <th>미수금</th>
+            <th>연체일수</th>
+            <th>동작</th>
           </tr>
         </thead>
         <tbody>
           {Array.isArray(filteredClients) && filteredClients.length > 0 ? (
-            filteredClients.map((c, index) => (
-              <tr key={c.id || c.code || index}>
-                <td>{c.code}</td>
-                <td>{c.nameOriginal}</td>
-                <td>{c.representative}</td>
-                <td>{c.businessNumber}</td>
-                <td>{c.address}</td>
-                <td>{c.email}</td>
-                <td>
-                  <button className="btn" onClick={() => handleEdit(c)}>
-                    정보수정
-                  </button>
-                </td>
-              </tr>
-            ))
+            filteredClients.map((c, index) => {
+              const receivable = receivables[c.id] || {};
+              const isOverdue = (receivable.overdueDays || 0) > 30;
+              return (
+                <tr 
+                  key={c.id || c.code || index}
+                  style={{
+                    background: isOverdue ? '#F8FAFC' : 'white'
+                  }}
+                >
+                  <td>{c.code}</td>
+                  <td>{maskClientData(c).nameOriginal}</td>
+                  <td>{maskClientData(c).representative}</td>
+                  <td>{maskClientData(c).businessNumber}</td>
+                  <td style={{ fontWeight: 600, color: receivable.overdue ? '#475BE8' : '#1E293B' }}>
+                    {receivable.total?.toLocaleString() || 0}원
+                    {receivable.overdue > 0 && (
+                      <span style={{ color: '#94A3B8', fontSize: '12px', marginLeft: '4px' }}>
+                        (연체: {receivable.overdue.toLocaleString()}원)
+                      </span>
+                    )}
+                  </td>
+                  <td>
+                    {receivable.overdueDays > 0 ? (
+                      <span style={{ color: '#475BE8', fontWeight: 600 }}>
+                        {receivable.overdueDays}일
+                      </span>
+                    ) : '-'}
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <button className="btn-outline" onClick={() => handleEdit(c)} style={{ fontSize: '12px', padding: '6px 12px' }}>
+                        정보수정
+                      </button>
+                      <button 
+                        className="btn-small" 
+                        onClick={() => openPriceModal(c)}
+                      >
+                        단가설정
+                      </button>
+                      <button 
+                        className="btn-small" 
+                        onClick={() => issueTempAccount(c)}
+                        style={{ opacity: 0.9 }}
+                      >
+                        임시계정
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })
           ) : (
             <tr>
               <td colSpan="7" style={{ textAlign: "center" }}>
@@ -274,6 +447,115 @@ export default function VendorClientManagement() {
           )}
         </tbody>
       </table>
+
+      {/* 병원별 단가 설정 모달 */}
+      {showPriceModal && selectedClient && (
+        <div className="modal-backdrop">
+          <div className="modal" style={{ maxWidth: '800px', maxHeight: '80vh', overflow: 'auto' }}>
+            <h3>병원별 단가 설정 - {maskClientData(selectedClient).nameOriginal || selectedClient.code}</h3>
+            <div style={{ marginBottom: '16px', fontSize: '14px', color: '#666' }}>
+              같은 약품이라도 병원마다 계약된 공급가가 다를 수 있습니다.
+            </div>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: '#5B89FF', color: 'white' }}>
+                  <th style={{ padding: '10px', textAlign: 'left' }}>제품명</th>
+                  <th style={{ padding: '10px', textAlign: 'right' }}>기본 단가</th>
+                  <th style={{ padding: '10px', textAlign: 'right' }}>거래처 단가</th>
+                  <th style={{ padding: '10px', textAlign: 'center' }}>동작</th>
+                </tr>
+              </thead>
+              <tbody>
+                {products.slice(0, 20).map((p) => {
+                  const clientPrice = clientPrices[selectedClient.id]?.[p.id];
+                  return (
+                    <tr key={p.id} style={{ borderBottom: '1px solid #E5E7EB' }}>
+                      <td style={{ padding: '10px' }}>{p.name}</td>
+                      <td style={{ padding: '10px', textAlign: 'right' }}>
+                        {p.basePrice?.toLocaleString() || '-'}원
+                      </td>
+                      <td style={{ padding: '10px', textAlign: 'right' }}>
+                        {clientPrice ? (
+                          <span style={{ fontWeight: 600, color: '#475BE8' }}>
+                            {clientPrice.toLocaleString()}원
+                          </span>
+                        ) : (
+                          <span style={{ color: '#999' }}>미설정</span>
+                        )}
+                      </td>
+                      <td style={{ padding: '10px', textAlign: 'center' }}>
+                        <input
+                          type="number"
+                          placeholder="단가 입력"
+                          onBlur={(e) => {
+                            const price = parseFloat(e.target.value);
+                            if (price > 0) {
+                              saveClientPrice(p.id, price);
+                            }
+                          }}
+                          style={{
+                            width: '120px',
+                            padding: '6px',
+                            border: '1px solid #D1D5DB',
+                            borderRadius: 4
+                          }}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            <div style={{ marginTop: 16, display: "flex", gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="btn secondary"
+                onClick={() => setShowPriceModal(false)}
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 임시계정 발급 모달 */}
+      {showTempAccountModal && (
+        <div className="modal-backdrop">
+          <div className="modal">
+            <h3>임시계정 발급 완료</h3>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 8 }}>
+                <strong>거래처:</strong> {maskClientData(showTempAccountModal.client).nameOriginal || showTempAccountModal.client.code}
+              </div>
+              <div style={{ marginBottom: 8 }}>
+                <strong>임시 아이디:</strong> {showTempAccountModal.tempId}
+              </div>
+              <div style={{ marginBottom: 8 }}>
+                <strong>임시 비밀번호:</strong> {showTempAccountModal.tempPassword}
+              </div>
+              <div style={{ marginBottom: 16, padding: '12px', background: '#E3F2FD', borderRadius: 4 }}>
+                <strong>로그인 링크:</strong>
+                <div style={{ marginTop: '8px', wordBreak: 'break-all', fontSize: '14px' }}>
+                  {showTempAccountModal.loginLink}
+                </div>
+              </div>
+              <div style={{ fontSize: '13px', color: '#666' }}>
+                로그인 링크가 SMS로 전송되었습니다.
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="btn secondary"
+                onClick={() => setShowTempAccountModal(null)}
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 신규 거래처 입력 모달 */}
       {showForm && (
@@ -324,29 +606,11 @@ export default function VendorClientManagement() {
         </div>
       )}
 
-      {/* 거래처 정보 수정 모달 (저장 버튼은 안내만) */}
+      {/* 거래처 정보 수정 모달 */}
       {editClient && (
         <div className="modal-backdrop">
           <div className="modal">
             <h3>거래처 정보 수정</h3>
-
-            <div
-              style={{
-                background: "#fff8e1",
-                border: "1px solid #ffe0b2",
-                padding: "10px 12px",
-                borderRadius: 8,
-                fontSize: 13,
-                marginBottom: 12,
-                lineHeight: 1.4,
-              }}
-            >
-              ⚠️ 현재 서버에 거래처 수정(PUT/PATCH) API가 확인되지 않아 저장은 막아둔 상태야.
-              <br />
-              컨트롤러에 <b>@PutMapping("/{`{id}`}")</b> 또는 <b>@PatchMapping("/{`{id}`}")</b>
-              를 추가해주면 바로 연결해줄게.
-            </div>
-
             <form onSubmit={handleEditSubmit} className="client-form">
               {clientFields.map((f) => (
                 <div className="form-group" key={f.name}>

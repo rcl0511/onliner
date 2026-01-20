@@ -1,134 +1,76 @@
+/* src/css/VendorClientManagement.css */
+.client-mgmt-container {
+  padding: 32px;
+  background: white;
+  min-height: calc(100vh - 48px);
+}
+
 .client-table {
   width: 100%;
-  border-collapse: collapse;
-  font-size: 15px;
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(50, 50, 93, 0.08);
-  margin-bottom: 30px;
-  border-radius: 8px;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: white;
+  border-radius: 20px;
   overflow: hidden;
-}
-
-.client-table thead tr {
-  background: #4f8cff;
-  color: #fff;
-}
-
-.client-table th, .client-table td {
-  padding: 11px 12px;
-  text-align: left;
-  border-bottom: 1px solid #e5e5e5;
+  border: 1px solid #F1F5F9;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
 }
 
 .client-table th {
+  background: #F8FAFC;
+  color: #94A3B8;
   font-weight: 600;
-  letter-spacing: 0.5px;
+  padding: 16px;
+  font-size: 13px;
+  text-align: left;
+  border-bottom: 1px solid #F1F5F9;
 }
 
-.client-table tbody tr:last-child td {
-  border-bottom: none;
+.client-table td {
+  padding: 16px;
+  font-size: 14px;
+  color: #1E293B;
+  border-bottom: 1px solid #F1F5F9;
 }
 
 .client-table tbody tr:hover {
-  background: #f2f7ff;
-  transition: background 0.2s;
-}
-.client-table th:nth-child(2),
-.client-table td:nth-child(2) {
-  width: 160px;
-  min-width: 120px;
-  max-width: 220px;
-  word-break: keep-all;
-}
-.client-table th:nth-child(4),
-.client-table td:nth-child(4) {
-  width: 145px;
-  min-width: 120px;
-  max-width: 170px;
-  word-break: break-all;
-}
-.client-table th:nth-child(5),
-.client-table td:nth-child(5) {
-  width: 240px;
-  min-width: 150px;
-  max-width: 320px;
-  word-break: break-all;
+  background: #F8FAFC;
 }
 
 .btn {
-  padding: 5px 13px;
-  border: none;
-  border-radius: 5px;
-  background: #4f8cff;
-  color: #fff;
-  font-size: 14px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
   cursor: pointer;
-  margin-right: 4px;
-  transition: background 0.2s;
+  transition: all 0.2s;
+  border: 1px solid #E2E8F0;
+  background: white;
+  color: #64748B;
 }
 
 .btn:hover {
-  background: #296dcc;
+  background: #F8FAFC;
+  border-color: #CBD5E1;
 }
 
-.btn.secondary {
-  background: #eee;
-  color: #222;
+.btn.primary {
+  background: #475BE8;
+  color: white;
+  border: none;
 }
 
-.btn.secondary:hover {
-  background: #d6d6d6;
+.btn.primary:hover {
+  background: #3B82F6;
 }
 
-/* 모달 관련 (추가) */
 .modal-backdrop {
-  position: fixed;
-  top: 0; left: 0; width: 100vw; height: 100vh;
-  background: rgba(0,0,0,0.2);
-  display: flex; justify-content: center; align-items: center;
-  z-index: 1000;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
 }
-.top-actions {
-  display: flex;
-  align-items: center;
-  margin-bottom: 18px;
-  gap: 8px; /* 버튼/입력창 사이 간격 */
-}
+
 .modal {
-  background: #fff;
-  padding: 26px 30px 22px 30px;
-  border-radius: 12px;
-  min-width: 320px;
-  max-width: 90vw;       /* 데스크탑 최대 너비 제한 */
-  max-height: 90vh;      /* 화면 높이의 90%까지 */
-  overflow-y: auto;      /* 넘치면 모달 내부 스크롤 */
-  box-shadow: 0 2px 18px rgba(0,0,0,0.08);
-}
-
-.client-form .form-group {
-  margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-}
-
-.client-form label {
-  width: 110px;
-  font-weight: 500;
-  margin-right: 14px;
-  font-size: 14px;
-  color: #305078;
-}
-
-.client-form input[type="text"],
-.client-form input[type="number"],
-.client-form input[type="date"] {
-  padding: 5px 8px;
-  border: 1px solid #b5cfff;
-  border-radius: 4px;
-  width: 220px;
-  font-size: 14px;
-}
-
-.client-form input[type="checkbox"] {
-  margin-right: 6px;
+  border-radius: 24px;
+  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+  padding: 32px;
 }

@@ -1,6 +1,6 @@
-/* src/css/Login.css */
+/* src/css/VendorLogin.css */
 
-.login-bg {
+.vendor-login-bg {
   width: 100vw;
   height: 100vh;
   background: #F9FAFB;
@@ -9,8 +9,8 @@
   align-items: center;
 }
 
-.login-form {
-  width: 400px;
+.vendor-login-form {
+  width: 450px;
   padding: 32px;
   background: white;
   border-radius: 8px;
@@ -19,7 +19,7 @@
   flex-direction: column;
 }
 
-.login-title {
+.vendor-login-title {
   color: #475BE8;
   font-size: 24px;
   font-weight: 800;
@@ -27,14 +27,14 @@
   text-align: center;
 }
 
-.login-label {
+.vendor-login-label {
   display: block;
   margin-bottom: 8px;
   color: #111827;
   font-weight: 500;
 }
 
-.login-input {
+.vendor-login-input {
   width: 95%;
   padding: 12px;
   margin-bottom: 16px;
@@ -43,20 +43,17 @@
   font-size: 16px;
 }
 
-.login-role-wrap {
-  margin-bottom: 16px;
-  font-size: 15px;
-  color: #333;
-}
-
-.login-error {
+.vendor-login-error {
   color: #FF3333;
   margin-bottom: 12px;
   text-align: center;
   font-size: 15px;
+  padding: 8px;
+  background: #FFEBEE;
+  border-radius: 4px;
 }
 
-.login-btn {
+.vendor-login-btn {
   width: 100%;
   padding: 12px;
   border-radius: 4px;
@@ -68,22 +65,22 @@
   transition: background 0.15s;
 }
 
-.login-btn.main {
+.vendor-login-btn.main {
   background: #475BE8;
   color: white;
   margin-bottom: 12px;
 }
 
-.login-btn.main:hover {
+.vendor-login-btn.main:hover {
   background: #304eb0;
 }
 
-.login-btn.sub {
+.vendor-login-btn.sub {
   background: #E5E7EB;
   color: #111827;
   margin-bottom: 0;
 }
 
-.login-btn.sub:hover {
+.vendor-login-btn.sub:hover {
   background: #D1D5DB;
 }

@@ -2,8 +2,8 @@
   {
     "_id": "ORD20240601001",
     "id": "ORD20240601001",
-    "client": "서울힐병원",
-    "manager": "김지영",
+    "client": "테스트병원A",
+    "manager": "홍길동",
     "date": "2024-06-01T12:45:23Z",
     "status": "PENDING",
     "total": 320000,
@@ -14,8 +14,8 @@
   {
     "_id": "ORD20240601002",
     "id": "ORD20240601002",
-    "client": "강남서울의원",
-    "manager": "이준호",
+    "client": "테스트병원B",
+    "manager": "김철수",
     "date": "2024-06-01T13:12:48Z",
     "status": "PENDING",
     "total": 210000,

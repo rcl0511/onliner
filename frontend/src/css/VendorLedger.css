@@ -1,158 +1,226 @@
+/* src/css/VendorLedger.css */
+@import './common.css';
+
 .vl-container {
-  padding: 20px;
+  padding: 32px;
+  background: white;
+  min-height: calc(100vh - 48px);
 }
 
 .vl-title {
-  margin-bottom: 16px;
-  font-size: 1.5rem;
+  margin-bottom: 32px;
+  font-size: 28px;
+  font-weight: 800;
+  color: #1E293B;
 }
 
 .vl-controls {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
 }
 
 .vl-dropdown {
   position: relative;
+  flex: 1;
+  min-width: 250px;
 }
 
 .vl-dropdown-input {
-  padding: 6px 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.2s;
+  background: white;
 }
 
-/* 드롭다운 리스트 예시 */
+.vl-dropdown-input:focus {
+  outline: none;
+  border-color: #475BE8;
+  box-shadow: 0 0 0 3px rgba(71, 91, 232, 0.1);
+}
+
 .vl-dropdown-list {
   position: absolute;
   top: 100%;
   left: 0;
-  width: 250px;
-  max-height: 200px;
+  right: 0;
+  max-height: 300px;
   overflow-y: auto;
-  background-color: #fff;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  z-index: 10;
+  background: white;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  z-index: 100;
+  margin-top: 4px;
 }
 
 .vl-dropdown-item {
-  padding: 8px 10px;
+  padding: 12px 16px;
   cursor: pointer;
   display: flex;
   align-items: center;
+  font-size: 14px;
+  color: #1E293B;
+  transition: background 0.2s;
 }
 
 .vl-dropdown-item:hover {
-  background-color: #f5f5f5;
+  background: #F8FAFC;
 }
 
 .vl-hospital-code {
-  color: #666;
-  font-size: 0.85rem;
-  margin-left: 4px;
+  color: #94A3B8;
+  font-size: 12px;
+  margin-left: 8px;
+}
+
+.vl-date-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.vl-date-range label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748B;
 }
 
 .vl-date-range input[type="date"] {
-  padding: 4px 6px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  padding: 12px 16px;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.2s;
+  background: white;
 }
 
-
-/* 테이블 컨테이너에 스크롤이 가능하도록 */
-.vl-table-wrap {
-  width: 100%;
-  overflow-x: auto;
-  margin-top: 20px;
+.vl-date-range input[type="date"]:focus {
+  outline: none;
+  border-color: #475BE8;
+  box-shadow: 0 0 0 3px rgba(71, 91, 232, 0.1);
 }
 
-/* 기본 테이블 스타일 */
-.vl-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-  text-align: left;
-}
-
-/* 헤더 스타일 */
-.vl-table thead th {
-  background-color: #0062cc;
-  color: #fff;
-  padding: 8px 12px;
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
-
-/* 본문 셀 스타일 */
-.vl-table tbody td {
-  padding: 8px 12px;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-/* 짝수/홀수 줄 배경색 */
-.vl-table tbody tr:nth-child(odd) {
-  background-color: #fafafa;
-}
-.vl-table tbody tr:nth-child(even) {
-  background-color: #fff;
-}
-
-/* 행 hover 시 강조 */
-.vl-table tbody tr:hover {
-  background-color: #f1faff;
-}
-
-/* 숫자 셀(우측 정렬) */
-.vl-table .right {
-  text-align: right;
-}
-
-/* Totals(합계) 행 스타일 */
-.vl-table tfoot tr {
-  background-color: #f0f0f0;
-  font-weight: bold;
-}
-.vl-table tfoot td {
-  padding: 10px 12px;
-  border-top: 2px solid #ccc;
-}
-
-/* 데이터가 없을 때 메시지 */
-.vl-nodata {
-  margin-top: 20px;
-  color: #555;
-  font-style: italic;
-}
 .vl-btn {
-  padding: 8px 16px;
-  background-color: #0062cc;
-  color: #fff;
+  padding: 12px 24px;
+  background: #475BE8;
+  color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  font-size: 0.9rem;
+  transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
   display: inline-flex;
   align-items: center;
-  transition: background-color 0.2s ease;
+  gap: 8px;
 }
 
 .vl-btn:hover {
-  background-color: #004bb5;
+  background: #3B82F6;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(71, 91, 232, 0.2);
 }
 
 .vl-btn svg {
-  margin-right: 6px;
+  font-size: 14px;
 }
 
-/* ===== 이 아래가 핵심: 버튼들을 한 줄에 붙이기 위한 flex 설정 ===== */
 .vl-btn-group {
-  display: flex;        /* 가로 정렬 */
-  gap: 12px;            /* 버튼 사이 간격 */
-  margin-top: 20px;     /* 위쪽 여백 */
-  align-items: center;  /* 세로 중앙 정렬 */
-  /* flex-wrap: nowrap;  // 필요에 따라 주석 해제 */
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.vl-loading {
+  padding: 40px;
+  text-align: center;
+  color: #64748B;
+  font-size: 14px;
+}
+
+.vl-totals {
+  background: white;
+  padding: 20px 24px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  border: 1px solid #F1F5F9;
+  display: flex;
+  gap: 32px;
+  font-size: 15px;
+  color: #1E293B;
+}
+
+.vl-totals strong {
+  color: #475BE8;
+  font-size: 18px;
+  font-weight: 700;
+  margin-left: 8px;
+}
+
+.vl-table-wrap {
+  background: white;
+  border-radius: 16px;
+  border: 1px solid #F1F5F9;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+  overflow: hidden;
+}
+
+.vl-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.vl-table thead th {
+  background: #F8FAFC;
+  color: #64748B;
+  padding: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.vl-table tbody td {
+  padding: 16px;
+  font-size: 14px;
+  color: #1E293B;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.vl-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.vl-table tbody tr:hover {
+  background: #F8FAFC;
+}
+
+.vl-table .right {
+  text-align: right;
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.vl-nodata {
+  margin-top: 40px;
+  padding: 40px;
+  text-align: center;
+  color: #94A3B8;
+  font-size: 14px;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #F1F5F9;
 }

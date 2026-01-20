@@ -174,8 +174,11 @@ const VendorLedger = () => {
 
   // ─────────────────────────────────────────────
   return (
-    <div className="vl-container">
-      <h2 className="vl-title">의약품 거래장 관리</h2>
+    <div className="vl-container" style={{ background: 'white', minHeight: 'calc(100vh - 48px)' }}>
+      <div style={{ marginBottom: '32px' }}>
+        <h2 className="vl-title">의약품 거래장 관리</h2>
+        <p style={{ margin: 0, color: '#64748B', fontSize: '14px' }}>병원별 거래 내역을 조회하고 거래장을 관리합니다.</p>
+      </div>
 
       {/* ─────────────────────────────────────────────
           상단: 병원 검색 + 기간 선택 + “조회” 버튼
@@ -221,21 +224,25 @@ const VendorLedger = () => {
         </div>
 
         <div className="vl-date-range">
-          <label style={{ marginRight: '7px' }}>기간:</label>
+          <label style={{ marginRight: '8px', fontSize: '14px', fontWeight: 600, color: '#64748B' }}>기간:</label>
           <input
             type="date"
             value={fromDate}
             onChange={e => setFromDate(e.target.value)}
+            className="input-field"
+            style={{ width: '140px' }}
           />
-          <span style={{ margin: '0 10px' }}>~</span>
+          <span style={{ margin: '0 8px', color: '#94A3B8' }}>~</span>
           <input
             type="date"
             value={toDate}
             onChange={e => setToDate(e.target.value)}
+            className="input-field"
+            style={{ width: '140px' }}
           />
         </div>
 
-        <button onClick={fetchLedger} className="vl-btn">
+        <button onClick={fetchLedger} className="btn-primary">
           <FaSearch /> 조회
         </button>
       </div>
@@ -244,13 +251,13 @@ const VendorLedger = () => {
           버튼 그룹: “거래요청서 보내기”, “거래장 등록하기”, “업로드”
       ───────────────────────────────────────────── */}
       <div className="vl-btn-group">
-        <button onClick={sendRequest} className="vl-btn">
+        <button onClick={sendRequest} className="btn-primary">
           <FaPaperPlane /> 거래요청서 보내기
         </button>
-        <button onClick={registerLedger} className="vl-btn">
+        <button onClick={registerLedger} className="btn-primary">
           거래장 등록하기
         </button>
-        <button onClick={uploadLedger} className="vl-btn">
+        <button onClick={uploadLedger} className="btn-primary">
           <FaUpload /> 업로드
         </button>
       </div>

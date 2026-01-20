@@ -1,129 +1,101 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import '../css/VendorDashboard.css';
+import '../css/common.css';
 
 const VendorDashboard = () => {
-    const user = JSON.parse(localStorage.getItem('userInfo')) || {};
+    const navigate = useNavigate();
     const [orders, setOrders] = useState([]);
     const [clients, setClients] = useState([]);
-    const [todaySales, settodaySales] = useState({});
+    const [todaySales, setTodaySales] = useState({});
+    const [deliveryStats, setDeliveryStats] = useState({});
+    const [lowStockItems, setLowStockItems] = useState([]);
+    const [unconfirmedInvoices, setUnconfirmedInvoices] = useState(0);
 
     useEffect(() => {
-        fetch('/vendor_orders.json')
-            .then(res => res.json())
-            .then(data => setOrders(data))
-            .catch(() => setOrders([]));
-
-        fetch('/vendor_clients.json')
-            .then(res => res.json())
-            .then(data => setClients(data))
-            .catch(() => setClients([]));
-
-        fetch('/todaySales.json')
-            .then(res => res.json())
-            .then(data => settodaySales(data))
-            .catch(() => settodaySales({}));
+        fetch('/vendor_orders.json').then(res => res.json()).then(setOrders).catch(() => setOrders([]));
+        setDeliveryStats({ pending: 5, inProgress: 12, completed: 45 });
+        setLowStockItems([
+            { code: 'A001', name: '타이레놀500mg', stock: 15, threshold: 50 },
+            { code: 'A002', name: '아스피린', stock: 23, threshold: 50 },
+            { code: 'A003', name: '게보린', stock: 8, threshold: 30 },
+        ]);
+        setUnconfirmedInvoices(8);
+        // 오늘 매출 임시 지정
+        setTodaySales({ totalSales: 12500000 });
     }, []);
 
     const getStatusColor = (status) => {
         switch (status) {
-            case '수락': return '#10B981';
-            case '대기': return '#F59E0B';
-            case '배송중': return '#3B82F6';
-            case '반려': return '#EF4444';
-            default: return '#6B7280';
+            case '수락': return '#475BE8';
+            case '대기': return '#64748B';
+            case '배송중': return '#475BE8';
+            default: return '#94A3B8';
         }
     };
 
     return (
-        <div className="vendor-dashboard-layout">
-            {/* 왼쪽 - 주요 요약 */}
-            <div className="vendor-dashboard-left">
-                {/* 요약 카드 */}
-                <div className="vendor-dashboard-summary-cards">
-                    <div className="summary-card">
-                        <div className="summary-label">오늘 신규 주문</div>
-                        <div className="summary-value">{orders.length}</div>
+        <div className="vendor-dashboard-layout" style={{ background: 'white', padding: '32px', minHeight: 'calc(100vh - 48px)' }}>
+            <div className="vendor-dashboard-widgets" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '32px' }}>
+                {[
+                    { label: '오늘 매출', value: todaySales?.totalSales?.toLocaleString() + '원', change: '+12.5%', icon: '💰' },
+                    { label: '배송 대기', value: (deliveryStats.pending + deliveryStats.inProgress) + '건', detail: `대기 ${deliveryStats.pending} / 진행 ${deliveryStats.inProgress}`, icon: '🚚' },
+                    { label: '재고 부족', value: lowStockItems.length + '개', detail: '임계치 이하 품목', icon: '📦' },
+                    { label: '미확인 명세서', value: unconfirmedInvoices + '건', detail: '확인 필요', icon: '📄' }
+                ].map((w, i) => (
+                    <div key={i} className="dashboard-widget" style={{ background: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #F1F5F9', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                        <div style={{ fontSize: '14px', color: '#64748B', fontWeight: 500, marginBottom: '12px' }}>{w.label}</div>
+                        <div style={{ fontSize: '28px', fontWeight: 800, color: '#1E293B', marginBottom: '8px' }}>{w.value}</div>
+                        {w.change && <div style={{ fontSize: '13px', color: '#475BE8', fontWeight: 600 }}>{w.change} <span style={{ color: '#94A3B8', fontWeight: 400 }}>vs yesterday</span></div>}
+                        {w.detail && <div style={{ fontSize: '13px', color: '#64748B' }}>{w.detail}</div>}
                     </div>
-                    <div className="summary-card">
-                        <div className="summary-label">등록 거래처</div>
-                        <div className="summary-value">{clients.length}</div>
-                    </div>
-                    <div className="summary-card">
-                        <div className="summary-label">오늘 매출</div>
-                        <div className="summary-value">
-                            {todaySales?.totalSales
-                                ? `${todaySales.totalSales.toLocaleString()}원`
-                                : '0원'}
-                        </div>
-                    </div>
-                </div>
-
-                {/* 최근 주문 테이블 */}
-                <div className="vendor-dashboard-table-block">
-                    <div className="table-title">최근 주문 현황</div>
-                    <table className="vendor-table">
-                        <thead>
-                            <tr>
-                                <th>NO</th>
-                                <th>주문ID</th>
-                                <th>거래처</th>
-                                <th>담당자</th>
-                                <th>주문일자</th>
-                                <th>상태</th>
-                                <th>총액</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-  {orders.map((order, idx) => (
-    <tr key={order.id}>
-      <td>{idx + 1}</td>
-      <td>{order.id}</td>
-      <td>{order.client}</td>
-      <td>{order.manager}</td>
-      <td>{order.date ? new Date(order.date).toLocaleString() : '-'}</td>
-      <td style={{ color: getStatusColor(order.status), fontWeight: 'bold' }}>{order.status}</td>
-      <td>
-        {typeof order.total === 'number' 
-          ? order.total.toLocaleString() + '원' 
-          : '-'}
-      </td>
-    </tr>
-  ))}
-</tbody>
-                    </table>
-                </div>
-
-                {/* 전체 주문 보기 */}
-                <div className="vendor-dashboard-viewall-btn">
-                    전체 주문 보기 ▶
-                </div>
+                ))}
             </div>
 
-            {/* 오른쪽 - 거래처, 공지 등 */}
-            <div className="vendor-dashboard-right">
-                {/* 거래처 요약 */}
-                <div className="vendor-dashboard-table-block" style={{ minHeight: 220 }}>
-                    <div className="table-title">주요 거래처(Top 5)</div>
-                    <table className="vendor-table">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                <div style={{ background: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #F1F5F9' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                        <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#1E293B' }}>최근 주문 현황</h3>
+                        <button onClick={() => navigate('/vendor/orders')} className="btn-outline" style={{ fontSize: '13px' }}>전체 보기</button>
+                    </div>
+                    <table className="vendor-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
-                            <tr>
-                                <th>거래처명</th>
-                                <th>담당자</th>
-                                <th>최근 주문일</th>
-                                <th>누적주문</th>
+                            <tr style={{ borderBottom: '2px solid #F1F5F9' }}>
+                                {['주문ID', '거래처', '담당자', '상태', '총액'].map(h => (
+                                    <th key={h} style={{ textAlign: 'left', padding: '12px', fontSize: '13px', color: '#64748B', fontWeight: 600 }}>{h}</th>
+                                ))}
                             </tr>
                         </thead>
                         <tbody>
-                            {clients.slice(0, 5).map((cli, idx) => (
-                                <tr key={idx}>
-                                    <td>{cli.name}</td>
-                                    <td>{cli.manager}</td>
-                                    <td>{cli.lastOrder}</td>
-                                    <td>{cli.orderCount}건</td>
+                            {orders.slice(0, 5).map((o, idx) => (
+                                <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                                    <td style={{ padding: '16px 12px', fontSize: '14px', color: '#1E293B', fontWeight: 500 }}>{o.id}</td>
+                                    <td style={{ padding: '16px 12px', fontSize: '14px', color: '#1E293B' }}>{o.client}</td>
+                                    <td style={{ padding: '16px 12px', fontSize: '14px', color: '#64748B' }}>{o.manager}</td>
+                                    <td style={{ padding: '16px 12px' }}>
+                                        <span style={{ fontSize: '12px', padding: '4px 10px', borderRadius: '6px', background: getStatusColor(o.status) + '15', color: getStatusColor(o.status), fontWeight: 700 }}>{o.status}</span>
+                                    </td>
+                                    <td style={{ padding: '16px 12px', fontSize: '14px', color: '#1E293B', fontWeight: 600 }}>{o.total?.toLocaleString()}원</td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
+                </div>
+
+                <div style={{ background: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #F1F5F9' }}>
+                    <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: 700, color: '#1E293B' }}>재고 경고 품목</h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
+                        {lowStockItems.map((item, idx) => (
+                            <div key={idx} style={{ padding: '16px', borderRadius: '12px', border: '1px solid #F1F5F9', background: '#F8FAFC' }}>
+                                <div style={{ fontSize: '12px', color: '#64748B', marginBottom: '4px' }}>{item.code}</div>
+                                <div style={{ fontSize: '15px', fontWeight: 700, color: '#1E293B', marginBottom: '8px' }}>{item.name}</div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '13px', color: '#475BE8', fontWeight: 600 }}>재고: {item.stock}</span>
+                                    <span style={{ fontSize: '11px', color: '#94A3B8' }}>임계치: {item.threshold}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
         </div>

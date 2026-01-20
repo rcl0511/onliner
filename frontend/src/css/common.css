@@ -1,0 +1,174 @@
+/* 공통 버튼 스타일 - 모든 페이지에서 사용 */
+.btn-primary {
+  background: #475BE8;
+  color: white;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-primary:hover {
+  background: #3B82F6;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(71, 91, 232, 0.2);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background: white;
+  color: #64748B;
+  padding: 12px 24px;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
+}
+
+.btn-secondary:hover {
+  background: #F8FAFC;
+  border-color: #CBD5E1;
+  color: #475BE8;
+}
+
+.btn-small {
+  background: #475BE8;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
+}
+
+.btn-small:hover {
+  background: #3B82F6;
+}
+
+.btn-outline {
+  background: white;
+  color: #475BE8;
+  padding: 8px 16px;
+  border: 1px solid #475BE8;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
+}
+
+.btn-outline:hover {
+  background: #EEF2FF;
+}
+
+/* 입력 필드 공통 스타일 */
+.input-field {
+  padding: 12px 16px;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.2s;
+  background: white;
+  color: #1E293B;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: #475BE8;
+  box-shadow: 0 0 0 3px rgba(71, 91, 232, 0.1);
+}
+
+.input-field::placeholder {
+  color: #94A3B8;
+}
+
+/* 셀렉트 박스 공통 스타일 */
+.select-field {
+  padding: 12px 16px;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.2s;
+  background: white;
+  color: #1E293B;
+  cursor: pointer;
+}
+
+.select-field:focus {
+  outline: none;
+  border-color: #475BE8;
+  box-shadow: 0 0 0 3px rgba(71, 91, 232, 0.1);
+}
+
+/* 카드 공통 스타일 */
+.card {
+  background: white;
+  border-radius: 16px;
+  border: 1px solid #F1F5F9;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+  padding: 24px;
+  transition: all 0.2s;
+}
+
+.card:hover {
+  box-shadow: 0 8px 12px -2px rgba(0,0,0,0.08);
+}
+
+/* 테이블 공통 스타일 */
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #F1F5F9;
+}
+
+.table thead {
+  background: #F8FAFC;
+}
+
+.table th {
+  padding: 16px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748B;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.table td {
+  padding: 16px;
+  font-size: 14px;
+  color: #1E293B;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr:hover {
+  background: #F8FAFC;
+}

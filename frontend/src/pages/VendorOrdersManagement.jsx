@@ -1,104 +1,129 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
 import '../css/VendorOrdersManagement.css';
+import '../css/common.css';
 
 const VendorOrdersManagement = () => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const navigate = useNavigate();
+    const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState('ALL');
+    const [selectedOrders, setSelectedOrders] = useState(new Set());
 
-    // 주문 목록 로드
-    const fetchOrders = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            // 서버 완성 전까지 public/vendor_orders.json 사용
-            const res = await fetch('/vendor_orders.json');
-            if (!res.ok) throw new Error('주문 목록 조회 실패');
-            const data = await res.json();
-            setOrders(data);
-        } catch (e) {
-            setError(e.message);
-        } finally {
-            setLoading(false);
+    useEffect(() => {
+        fetch('/vendor_orders.json')
+            .then(res => res.json())
+            .then(data => {
+                setOrders(data);
+                setLoading(false);
+            })
+            .catch(() => setLoading(false));
+    }, []);
+
+    const filteredOrders = useMemo(() => {
+        return orders.filter(o => {
+            const matchesStatus = statusFilter === 'ALL' || o.status === statusFilter;
+            const matchesSearch = !searchQuery || 
+                o.client.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                o.id.toLowerCase().includes(searchQuery.toLowerCase());
+            return matchesStatus && matchesSearch;
+        });
+    }, [orders, statusFilter, searchQuery]);
+
+    const toggleSelect = (id) => {
+        const next = new Set(selectedOrders);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        setSelectedOrders(next);
+    };
+
+    const getStatusStyle = (status) => {
+        switch (status) {
+            case 'ACCEPTED': return { background: '#E0E7FF', color: '#475BE8' };
+            case 'PENDING': return { background: '#F1F5F9', color: '#64748B' };
+            default: return { background: '#F1F5F9', color: '#94A3B8' };
         }
     };
 
-    useEffect(() => {
-        fetchOrders();
-    }, []);
-
-    // 주문 수락 처리 (여기선 예시용으로만 이동)
-    const handleAccept = (order) => {
-        navigate('/vendor/invoice', { state: { order } });
-    };
-
-    const pendingOrders = orders.filter(o => o.status === 'PENDING');
-
     return (
-        <div className="vom-container">
-            <h2 className="vom-title">주문 관리</h2>
-            {loading && <p>주문 목록을 불러오는 중...</p>}
-            {error && <p className="vom-error">에러: {error}</p>}
+        <div className="vom-container" style={{ background: 'white', padding: '32px', minHeight: 'calc(100vh - 48px)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '32px' }}>
+                <div>
+                    <h2 style={{ margin: '0 0 8px 0', fontSize: '24px', fontWeight: 800, color: '#1E293B' }}>주문 통합 관리</h2>
+                    <p style={{ margin: 0, color: '#64748B', fontSize: '14px' }}>실시간 주문 현황 파악 및 배송 지시를 관리합니다.</p>
+                </div>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                    <div style={{ position: 'relative' }}>
+                        <input 
+                            type="text" 
+                            placeholder="주문번호 또는 거래처 검색..." 
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="input-field"
+                            style={{ width: '300px' }}
+                        />
+                    </div>
+                    <select 
+                        value={statusFilter} 
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        className="select-field"
+                    >
+                        <option value="ALL">전체 상태</option>
+                        <option value="PENDING">대기중</option>
+                        <option value="ACCEPTED">수락됨</option>
+                    </select>
+                </div>
+            </div>
 
-            {!loading && !error && (
-                <table className="vom-table">
+            <div style={{ background: 'white', borderRadius: '20px', border: '1px solid #F1F5F9', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+                <div style={{ padding: '20px 24px', borderBottom: '1px solid #F1F5F9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F8FAFC' }}>
+                    <span style={{ fontSize: '14px', fontWeight: 600, color: '#64748B' }}>총 {filteredOrders.length}건의 주문</span>
+                    {selectedOrders.size > 0 && (
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            <button className="btn-small">일괄 수락 ({selectedOrders.size})</button>
+                        </div>
+                    )}
+                </div>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
-                        <tr>
-                            {['주문번호', '병원명', '제품명', '수량', '주문일', '상태', '동작'].map((th, idx) => (
-                                <th key={idx}>{th}</th>
+                        <tr style={{ borderBottom: '1px solid #F1F5F9', background: '#FFFFFF' }}>
+                            <th style={{ width: '50px', padding: '16px' }}>
+                                <input type="checkbox" onChange={(e) => {
+                                    if (e.target.checked) setSelectedOrders(new Set(filteredOrders.map(o => o.id)));
+                                    else setSelectedOrders(new Set());
+                                }} />
+                            </th>
+                            {['주문번호', '거래처', '주문일시', '금액', '상태', '관리'].map(h => (
+                                <th key={h} style={{ textAlign: 'left', padding: '16px', fontSize: '13px', fontWeight: 600, color: '#94A3B8' }}>{h}</th>
                             ))}
                         </tr>
                     </thead>
                     <tbody>
-                        {pendingOrders.length === 0 ? (
-                            <tr>
-                                <td colSpan={7} className="vom-center">
-                                    수락 대기 중인 주문이 없습니다.
+                        {filteredOrders.map((o) => (
+                            <tr key={o.id} style={{ borderBottom: '1px solid #F1F5F9', transition: 'background 0.2s' }}>
+                                <td style={{ padding: '16px', textAlign: 'center' }}>
+                                    <input type="checkbox" checked={selectedOrders.has(o.id)} onChange={() => toggleSelect(o.id)} />
+                                </td>
+                                <td style={{ padding: '16px', fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>{o.id}</td>
+                                <td style={{ padding: '16px', fontSize: '14px', color: '#1E293B' }}>{o.client}</td>
+                                <td style={{ padding: '16px', fontSize: '14px', color: '#64748B' }}>{o.date}</td>
+                                <td style={{ padding: '16px', fontSize: '14px', fontWeight: 600, color: '#1E293B' }}>{o.total?.toLocaleString()}원</td>
+                                <td style={{ padding: '16px' }}>
+                                    <span style={{ 
+                                        padding: '6px 12px', 
+                                        borderRadius: '8px', 
+                                        fontSize: '12px', 
+                                        fontWeight: 700,
+                                        ...getStatusStyle(o.status)
+                                    }}>{o.status}</span>
+                                </td>
+                                <td style={{ padding: '16px' }}>
+                                    <button className="btn-outline" style={{ fontSize: '12px', padding: '6px 12px' }}>상세보기</button>
                                 </td>
                             </tr>
-                        ) : (
-                            pendingOrders.map(order =>
-                                order.items.map((item, i) => (
-                                    <tr key={`${order._id}-${item.code}-${i}`}>
-                                        {i === 0 && (
-                                            <td rowSpan={order.items.length}>
-                                                {order._id.slice(-6)}
-                                            </td>
-                                        )}
-                                        {i === 0 && (
-                                            <td rowSpan={order.items.length}>
-                                                {order.client}
-                                            </td>
-                                        )}
-                                        <td>{item.name}</td>
-                                        <td>{item.qty}</td>
-                                        {i === 0 && (
-                                            <td rowSpan={order.items.length}>
-                                                {order.date ? new Date(order.date).toLocaleString() : '-'}
-                                            </td>
-                                        )}
-                                        {i === 0 && (
-                                            <td rowSpan={order.items.length}>
-                                                {order.status}
-                                            </td>
-                                        )}
-                                        {i === 0 && (
-                                            <td rowSpan={order.items.length}>
-                                                <button
-                                                    onClick={() => handleAccept(order)}
-                                                    className="vom-btn-accept"
-                                                >수락</button>
-                                            </td>
-                                        )}
-                                    </tr>
-                                ))
-                            )
-                        )}
+                        ))}
                     </tbody>
                 </table>
-            )}
+            </div>
         </div>
     );
 };

@@ -44,17 +44,51 @@ const MainLayout = () => {
     navItem("기타", "/hospital/logs"),
   ];
 
-  const vendorMenu = [
-    navItem("메인화면", "/vendor/dashboard"),
-    navItem("주문관리", "/vendor/orders"),
-    navItem("재고관리", "/vendor/stocks"),
-    navItem("배송관리", "/vendor/delivery"),
-    navItem("명세서 발행", "/vendor/invoice"),
-    navItem("거래장 조회", "/vendor/trade"),
-    navItem("명세서 조회", "/vendor/invoicesave"),
-    navItem("거래처 관리", "/vendor/clients"),
-    navItem("공지사항", "/vendor/alarms"),
-  ];
+  // 권한별 메뉴 필터링
+  const getVendorMenu = () => {
+    const permission = user.permission; // MASTER, SALES, WAREHOUSE
+    const allMenus = [
+      navItem("메인화면", "/vendor/dashboard"),
+      navItem("주문관리", "/vendor/orders"),
+      navItem("재고관리", "/vendor/stocks"),
+      navItem("배송관리", "/vendor/delivery"),
+      navItem("명세서 발행", "/vendor/invoice"),
+      navItem("거래장 조회", "/vendor/trade"),
+      navItem("명세서 조회", "/vendor/invoicesave"),
+      navItem("거래처 관리", "/vendor/clients"),
+      navItem("공지사항", "/vendor/alarms"),
+    ];
+
+    // 마스터 관리자: 모든 메뉴 접근 가능
+    if (permission === 'MASTER') {
+      return allMenus;
+    }
+    
+    // 영업사원: 주문, 명세서, 거래처 관리
+    if (permission === 'SALES') {
+      return [
+        navItem("메인화면", "/vendor/dashboard"),
+        navItem("주문관리", "/vendor/orders"),
+        navItem("명세서 발행", "/vendor/invoice"),
+        navItem("명세서 조회", "/vendor/invoicesave"),
+        navItem("거래처 관리", "/vendor/clients"),
+      ];
+    }
+    
+    // 창고 관리자: 재고, 배송 관리
+    if (permission === 'WAREHOUSE') {
+      return [
+        navItem("메인화면", "/vendor/dashboard"),
+        navItem("재고관리", "/vendor/stocks"),
+        navItem("배송관리", "/vendor/delivery"),
+      ];
+    }
+
+    // 기본값: 모든 메뉴 (권한 정보가 없을 경우)
+    return allMenus;
+  };
+
+  const vendorMenu = getVendorMenu();
 
   const footerLinks = [
     { text: "공지사항", path: "/community" },
@@ -121,6 +155,18 @@ const MainLayout = () => {
             <div className="mainlayout-user-block">
               <div className="mainlayout-user-name">{user.name || "사용자 이름"}</div>
               <div className="mainlayout-user-email">{user.email || "user@example.com"}</div>
+              {user.companyName && (
+                <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                  {user.companyName} ({user.companyCode})
+                </div>
+              )}
+              {user.permission && (
+                <div style={{ fontSize: '11px', color: '#999', marginTop: '2px' }}>
+                  {user.permission === 'MASTER' ? '마스터 관리자' : 
+                   user.permission === 'SALES' ? '영업사원' : 
+                   user.permission === 'WAREHOUSE' ? '창고 관리자' : ''}
+                </div>
+              )}
               <button className="mainlayout-logout" onClick={onLogout}>
                 로그아웃
               </button>
@@ -130,9 +176,9 @@ const MainLayout = () => {
       )}
 
       {/* 메인 콘텐츠 */}
-      <main className="mainlayout-main">
+      <main className={`mainlayout-main ${!sidebarOpen ? 'sidebar-closed' : ''}`}>
         {!sidebarOpen && (
-          <div className="mainlayout-menu-btn" onClick={toggleSidebar}>
+          <div className="mainlayout-menu-btn" onClick={toggleSidebar} style={{ position: 'fixed', top: '20px', left: '20px', zIndex: 1000 }}>
             <span>☰ 메뉴 열기</span>
           </div>
         )}

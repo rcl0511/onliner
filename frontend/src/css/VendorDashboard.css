@@ -1,87 +1,45 @@
+/* src/css/VendorDashboard.css */
 .vendor-dashboard-layout {
-  display: flex;
-  gap: 24px;
+  background: #F8FAFC;
   min-height: 100vh;
 }
-.vendor-dashboard-left {
-  flex: 7;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+
+.dashboard-widget {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  border: 1px solid #F1F5F9;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+  transition: transform 0.2s;
 }
-.vendor-dashboard-summary-cards {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 10px;
+
+.dashboard-widget:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
 }
-.summary-card {
-  flex: 1;
-  background: #EFF6FF;
-  border-radius: 10px;
-  padding: 16px 12px 12px 18px;
-  box-shadow: 0 2px 8px rgba(91,137,255,0.07);
-}
-.summary-label {
-  color: #444;
-  font-size: 13px;
-  font-weight: 500;
-  margin-bottom: 4px;
-}
-.summary-value {
-  font-size: 24px;
-  font-weight: 700;
-  color: #475BE8;
-}
-.vendor-dashboard-table-block {
-  background: #fff;
-  border-radius: 8px;
-  overflow: hidden;
-  margin-bottom: 8px;
-  box-shadow: 0 1px 4px rgba(220,220,220,0.12);
-  padding: 0 0 10px 0;
-}
-.table-title {
-  font-weight: 700;
-  padding: 12px 18px 6px 18px;
-  font-size: 16px;
-  color: #475BE8;
-}
-.vendor-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-  margin: 0;
-}
-.vendor-table th, .vendor-table td {
-  padding: 8px;
-  border-bottom: 1px solid #eee;
-  text-align: center;
-}
+
 .vendor-table th {
-  background: #5B89FF;
-  color: white;
-}
-.vendor-dashboard-viewall-btn {
-  align-self: flex-end;
-  padding: 8px 16px;
-  background: #EFF6FF;
-  outline: 1px solid #3B82F6;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
+  background: #F8FAFC;
+  color: #64748B;
   font-weight: 600;
-  color: #2563EB;
-  font-family: 'Inter', sans-serif;
-  margin-top: 10px;
-  margin-bottom: 20px;
-  transition: background 0.15s;
+  font-size: 13px;
+  border-bottom: 2px solid #F1F5F9;
 }
-.vendor-dashboard-viewall-btn:hover {
-  background: #D2E2FF;
+
+.vendor-table td {
+  border-bottom: 1px solid #F1F5F9;
+  padding: 16px 12px;
 }
-.vendor-dashboard-right {
-  flex: 3;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+
+.vendor-btn-small {
+  background: #475BE8;
+  color: white;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 600;
+  transition: opacity 0.2s;
+}
+
+.vendor-btn-small:hover {
+  opacity: 0.9;
 }

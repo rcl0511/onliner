@@ -1,135 +1,115 @@
-/* container 전반 */
+/* src/css/VendorDelivery.css */
 .delivery-container {
-  padding: 1rem;
-  font-family: Arial, sans-serif;
+  padding: 32px;
+  font-family: 'Inter', sans-serif;
+  background: white;
+  min-height: calc(100vh - 48px);
 }
 
 .delivery-title {
-  font-size: 1.5rem;
-  margin-bottom: 1rem;
+  font-size: 28px;
+  font-weight: 800;
+  color: #1E293B;
+  margin-bottom: 32px;
 }
 
-/* 왼쪽-오른쪽으로 나누어 배치 */
 .delivery-flex {
   display: flex;
-  gap: 1rem;
+  gap: 24px;
+  margin-top: 24px;
 }
 
-/* ==================== */
-/* (A) PDF 목록 영역 */
-/* ==================== */
 .pdf-list-area {
-  flex: 1;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 0.5rem;
-  background-color: #fafafa;
+  flex: 0 0 300px;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 20px;
+  background: #F8FAFC;
 }
 
 .area-heading {
-  font-size: 1.2rem;
-  margin-bottom: 0.5rem;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1E293B;
+  margin-bottom: 16px;
 }
 
-/* PDF 카드 리스트 */
 .pdf-cards {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 12px;
 }
 
-/* 개별 PDF 카드 */
 .pdf-card {
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  padding: 0.5rem;
-  background-color: #fff;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 12px;
+  background: white;
   cursor: grab;
+  transition: all 0.2s;
+}
+
+.pdf-card:hover {
+  border-color: #475BE8;
+  box-shadow: 0 2px 4px rgba(71, 91, 232, 0.1);
 }
 
 .pdf-card:active {
   cursor: grabbing;
 }
 
-.pdf-name {
-  font-weight: bold;
-  margin-bottom: 0.25rem;
-}
-
-.pdf-link {
-  font-size: 0.9rem;
-  color: #007bff;
-  text-decoration: none;
-}
-
-/* ==================== */
-/* (B) 배송 기사 목록 영역 */
-/* ==================== */
 .drivers-area {
   flex: 1;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 0.5rem;
-  background-color: #fafafa;
 }
 
-/* 기사 카드 컨테이너 */
 .driver-cards {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  padding: 0 20px;
 }
 
-/* 개별 기사 카드 */
 .driver-card {
-  border: 2px dashed #bbb;
-  border-radius: 4px;
-  min-height: 100px;
-  padding: 0.5rem;
-  background-color: #fff;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 16px;
+  background: white;
+  transition: all 0.2s;
+  cursor: pointer;
 }
 
-/* 드롭 가능한 영역에 마우스가 올라가면 배경색 강조 (선택사항) */
 .driver-card:hover {
-  background-color: #f0f8ff;
+  border-color: #475BE8;
+  box-shadow: 0 4px 8px rgba(71, 91, 232, 0.1);
 }
 
 .driver-name {
-  font-weight: bold;
-  margin-bottom: 0.5rem;
+  font-weight: 700;
+  font-size: 16px;
+  color: #1E293B;
+  margin-bottom: 8px;
 }
 
-/* 기사에게 할당된 PDF 목록 */
 .assigned-pdfs {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  margin-top: 0.5rem;
+  gap: 8px;
+  margin-top: 12px;
 }
 
-/* 할당된 PDF 아이템 */
 .assigned-item {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.25rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: #f9f9f9;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  background: #F8FAFC;
+  font-size: 13px;
 }
 
-.assigned-name {
-  font-size: 0.9rem;
-}
-
-.assigned-link {
-  font-size: 0.8rem;
-  color: #007bff;
-  text-decoration: none;
-}
-
-/* “할당된 PDF 없음” 메시지 */
 .no-assigned {
-  font-size: 0.9rem;
-  color: #777;
+  font-size: 13px;
+  color: #94A3B8;
+  font-style: italic;
 }
