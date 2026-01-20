@@ -42,19 +42,6 @@ const VendorInvoice = () => {
 
   const navigate = useNavigate();
 
-  // 초기 마운트 시 재고 정보 가져오기
-  useEffect(() => {
-    fetchStockItems();
-    fetchClients();
-  }, [fetchStockItems, fetchClients]);
-
-  // 거래처 변경 시 이력 불러오기
-  useEffect(() => {
-    if (invoiceHeader.customerId) {
-      fetchOrderHistory(invoiceHeader.customerId);
-    }
-  }, [invoiceHeader.customerId]);
-
   // 가짜 제품명으로 마스킹하는 함수
   const maskProductName = (product) => {
     if (!product) return product;
@@ -136,6 +123,19 @@ const VendorInvoice = () => {
       console.error(e);
     }
   };
+
+  // 초기 마운트 시 재고 정보 가져오기
+  useEffect(() => {
+    fetchStockItems();
+    fetchClients();
+  }, [fetchStockItems, fetchClients]);
+
+  // 거래처 변경 시 이력 불러오기
+  useEffect(() => {
+    if (invoiceHeader.customerId) {
+      fetchOrderHistory(invoiceHeader.customerId);
+    }
+  }, [invoiceHeader.customerId]);
 
   // (B-2) 수기 명세서 헤더 변경 핸들러
   const handleHeaderChange = (e) => {
