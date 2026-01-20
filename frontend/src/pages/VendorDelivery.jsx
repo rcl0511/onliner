@@ -130,9 +130,11 @@ const VendorDelivery = () => {
         updateMarkers();
     }, [driverLocations, drivers]);
 
+    const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080';
+
     const fetchDrivers = async () => {
         try {
-            const res = await fetch('http://localhost:8080/api/drivers');
+            const res = await fetch(`${API_BASE}/api/drivers`);
             const data = res.ok ? await res.json() : [];
             setDrivers(data);
             const initial = {};

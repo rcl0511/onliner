@@ -141,7 +141,7 @@ export default function VendorClientManagement() {
   // 제품 목록 조회 (단가 설정용)
   const fetchProducts = async () => {
     try {
-      const res = await fetch('http://localhost:8080/api/medicines');
+      const res = await fetch(`${API_ORIGIN}/api/medicines`);
       if (res.ok) {
         const data = await res.json();
         setProducts(data.slice(0, 50)); // 처음 50개만

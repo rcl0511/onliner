@@ -8,6 +8,8 @@ const getTodayDateString = () => {
 };
 
 const VendorInvoice = () => {
+  const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080';
+  
   // (A) 재고 정보(제품 목록 + 단가) 불러오기
   const [stockItems, setStockItems] = useState([]);
   const [loadingStock, setLoadingStock] = useState(false);
@@ -71,7 +73,7 @@ const VendorInvoice = () => {
   const fetchStockItems = async () => {
     setLoadingStock(true);
     try {
-      const res = await fetch('http://localhost:8080/api/medicines');
+      const res = await fetch(`${API_BASE}/api/medicines`);
       if (!res.ok) throw new Error('재고 정보 조회 실패');
       const data = await res.json();
       // 가짜 제품명으로 마스킹
@@ -263,7 +265,7 @@ const VendorInvoice = () => {
     files.forEach((f) => formData.append('invoices', f));
 
     try {
-      const res = await fetch('http://localhost:8080/api/invoices/upload-multiple', {
+      const res = await fetch(`${API_BASE}/api/invoices/upload-multiple`, {
         method: 'POST',
         body: formData,
       });
@@ -641,7 +643,7 @@ const VendorInvoice = () => {
                   <p className="card-row">
                     생성된 PDF:{' '}
                     <a
-                      href={`http://localhost:8080${r.pdfUrl}`}
+                      href={`${API_BASE}${r.pdfUrl}`}
                       download
                       target="_blank"
                       rel="noreferrer"

@@ -1,5 +1,6 @@
 // src/api/medicineApi.js
-const BASE_URL = 'http://localhost:8080/api/medicines';
+const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080';
+const BASE_URL = `${API_BASE}/api/medicines`;
 
 export const fetchAllMedicines = async () => {
   const res = await fetch(BASE_URL);
