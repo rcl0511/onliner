@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.context.annotation.Profile;
 
-@CrossOrigin(origins = "http://localhost:3000")  // React 프론트엔드가 3000번 포트에서 호출할 경우
 @RestController
 @RequestMapping("/api/medicines")
 @Profile("!render-nodb")

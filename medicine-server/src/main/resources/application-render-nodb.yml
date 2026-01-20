@@ -7,6 +7,11 @@ spring:
       - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
       - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
 
+# CORS 허용 오리진 (쉼표로 구분)
+cors:
+  allowed:
+    origins: http://localhost:3000,https://onlinerr.netlify.app,https://*.netlify.app
+
 # (선택) 로그 줄이기
 logging:
   level:
