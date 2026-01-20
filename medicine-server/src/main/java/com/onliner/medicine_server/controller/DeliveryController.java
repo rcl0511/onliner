@@ -4,6 +4,7 @@ import com.onliner.medicine_server.entity.Driver;
 import com.onliner.medicine_server.entity.PdfAssignment;
 import com.onliner.medicine_server.service.DeliveryService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,6 +12,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api")
+@Profile("!render-nodb")
 public class DeliveryController {
 
     private final DeliveryService deliveryService;

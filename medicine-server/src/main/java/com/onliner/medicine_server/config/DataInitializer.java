@@ -6,8 +6,10 @@ import com.onliner.medicine_server.repository.DriverRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 
 @Configuration
+@Profile("!render-nodb")
 public class DataInitializer {
 
     @Bean

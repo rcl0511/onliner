@@ -17,10 +17,12 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
+import org.springframework.context.annotation.Profile;
 
 @RestController
 @RequestMapping("/api/vendors/clients")
 @CrossOrigin(origins = "http://localhost:3000")
+@Profile("!render-nodb")
 public class VendorClientController {
 
     @Autowired

@@ -74,7 +74,7 @@ Spring Boot 애플리케이션을 호스팅할 수 있는 옵션들:
 
 ### 옵션 2: Render (추천) ⭐
 
-**장점**: 무료 플랜, 쉬운 설정, Dockerfile 지원
+**장점**: 무료 플랜, 쉬운 설정, Dockerfile 지원, API 제공
 
 1. [Render](https://render.com/) 가입
 2. "New Web Service" 선택
@@ -94,6 +94,39 @@ Spring Boot 애플리케이션을 호스팅할 수 있는 옵션들:
 - Dockerfile이 이미 생성되어 있어 자동으로 사용됩니다
 - `application-render-nodb.yml` 프로파일로 DB 없이 테스트 가능
 - `/healthz` 엔드포인트로 헬스 체크 가능
+
+#### Render API 사용하기
+
+Render API를 사용하여 서비스를 관리할 수 있습니다:
+
+**API 키 설정:**
+```bash
+export RENDER_API_KEY=rnd_ThFRQGbIgd5FsSYKmEdi8crCrlLv
+```
+
+**서비스 목록 조회:**
+```bash
+# Node.js 스크립트 사용
+node scripts/render-service-info.js
+
+# 또는 curl 직접 사용
+curl --request GET \
+     --url 'https://api.render.com/v1/services?limit=20' \
+     --header 'Accept: application/json' \
+     --header 'Authorization: Bearer rnd_ThFRQGbIgd5FsSYKmEdi8crCrlLv'
+```
+
+**특정 서비스 정보 조회:**
+```bash
+node scripts/render-service-info.js <service-id>
+```
+
+**API 테스트:**
+```bash
+node scripts/render-api-test.js
+```
+
+**참고**: API 키는 환경 변수로 관리하는 것을 권장합니다. `render-api-config.json` 파일은 참고용이며, 실제로는 환경 변수나 보안 저장소를 사용하세요.
 
 ### 옵션 3: Heroku
 

@@ -2,15 +2,15 @@
 .mainlayout-root {
   display: flex;
   min-height: 100vh;
-  height: 100vh;
   box-sizing: border-box;
-  overflow: hidden;
+  background: white;
 }
 
 .mainlayout-sidebar {
   width: 260px;
   background: #F8FAFC;
   padding: 20px;
+  padding-bottom: 24px;
   border-right: 1px solid #E2E8F0;
   display: flex;
   flex-direction: column;
@@ -19,7 +19,9 @@
   left: 0;
   top: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   z-index: 100;
+  box-sizing: border-box;
 }
 
 .mainlayout-header {
@@ -67,6 +69,7 @@
   gap: 4px;
   flex: 1;
   overflow-y: auto;
+  min-height: 0;
 }
 
 .mainlayout-nav-item {
@@ -136,8 +139,9 @@
 }
 
 .mainlayout-userinfo {
-  margin-top: 16px;
+  margin-top: auto;
   padding-top: 16px;
+  padding-bottom: 0;
   border-top: 1px solid #E2E8F0;
   display: flex;
   align-items: flex-start;
@@ -176,12 +180,18 @@
 }
 
 .mainlayout-main {
-  flex: 1;
   margin-left: 260px;
   min-height: 100vh;
-  background: #F8FAFC;
+  width: calc(100% - 260px);
+  background: white;
   overflow-y: auto;
-  transition: margin-left 0.3s;
+  transition: margin-left 0.3s, width 0.3s;
+  box-sizing: border-box;
+}
+
+.mainlayout-main.sidebar-closed {
+  margin-left: 0;
+  width: 100%;
 }
 
 .mainlayout-menu-btn {

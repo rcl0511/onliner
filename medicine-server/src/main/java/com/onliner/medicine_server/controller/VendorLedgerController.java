@@ -4,6 +4,7 @@ package com.onliner.medicine_server.controller;
 import com.onliner.medicine_server.entity.VendorLedgerEntry;
 import com.onliner.medicine_server.service.VendorLedgerService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -13,6 +14,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/vendors")
 @RequiredArgsConstructor
+@Profile("!render-nodb")
 public class VendorLedgerController {
 
     private final VendorLedgerService ledgerService;
