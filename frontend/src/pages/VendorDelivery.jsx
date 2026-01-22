@@ -1,5 +1,5 @@
 // src/pages/VendorDelivery.jsx
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import '../css/VendorDelivery.css';
 import '../css/common.css';
@@ -28,33 +28,12 @@ const VendorDelivery = () => {
     const GOOGLE_MAPS_API_KEY = 'AIzaSyCeAo-v9T_jpuvDn8kwpWtl8f0KOnnLXuc';
     const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080';
 
-    const getStoredDrivers = () => {
+    const getStoredDrivers = useCallback(() => {
         try {
             return JSON.parse(localStorage.getItem(LOCAL_DRIVER_KEY) || "[]");
         } catch {
             return [];
         }
-    };
-
-    useEffect(() => {
-        if (pdfList.length === 0) {
-            try {
-                const stored = JSON.parse(localStorage.getItem(DELIVERY_PAYLOAD_KEY) || "{}");
-                const fallbackList = [...(stored.auto || []), ...(stored.manual || [])];
-                if (fallbackList.length > 0) {
-                    setPdfList(fallbackList);
-                }
-            } catch {
-                // ignore
-            }
-        }
-        fetchDrivers();
-        loadGoogleMaps();
-        const interval = setInterval(fetchDriverLocations, 5000);
-        return () => {
-            clearInterval(interval);
-            markersRef.current.forEach(marker => marker.setMap(null));
-        };
     }, []);
 
     useEffect(() => {
@@ -81,35 +60,7 @@ const VendorDelivery = () => {
         });
     }, [pdfList]);
 
-    const loadGoogleMaps = () => {
-        if (window.google && window.google.maps) {
-            initMap();
-            return;
-        }
-        const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=geometry`;
-        script.async = true;
-        script.defer = true;
-        script.onload = initMap;
-        document.head.appendChild(script);
-    };
-
-    const initMap = () => {
-        if (!mapRef.current || !window.google) return;
-        const map = new window.google.maps.Map(mapRef.current, {
-            center: { lat: 37.5665, lng: 126.9780 },
-            zoom: 12,
-            disableDefaultUI: false,
-            styles: [
-                { featureType: "poi", stylers: [{ visibility: "off" }] },
-                { featureType: "transit", stylers: [{ visibility: "off" }] }
-            ]
-        });
-        mapInstanceRef.current = map;
-        updateMarkers();
-    };
-
-    const updateMarkers = () => {
+    const updateMarkers = useCallback(() => {
         if (!mapInstanceRef.current || !window.google) return;
         markersRef.current.forEach(m => m.setMap(null));
         markersRef.current = [];
@@ -174,13 +125,41 @@ const VendorDelivery = () => {
 
             markersRef.current.push(marker);
         });
-    };
+    }, [driverLocations, drivers]);
+
+    const initMap = useCallback(() => {
+        if (!mapRef.current || !window.google) return;
+        const map = new window.google.maps.Map(mapRef.current, {
+            center: { lat: 37.5665, lng: 126.9780 },
+            zoom: 12,
+            disableDefaultUI: false,
+            styles: [
+                { featureType: "poi", stylers: [{ visibility: "off" }] },
+                { featureType: "transit", stylers: [{ visibility: "off" }] }
+            ]
+        });
+        mapInstanceRef.current = map;
+        updateMarkers();
+    }, [updateMarkers]);
+
+    const loadGoogleMaps = useCallback(() => {
+        if (window.google && window.google.maps) {
+            initMap();
+            return;
+        }
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=geometry`;
+        script.async = true;
+        script.defer = true;
+        script.onload = initMap;
+        document.head.appendChild(script);
+    }, [GOOGLE_MAPS_API_KEY, initMap]);
 
     useEffect(() => {
         updateMarkers();
-    }, [driverLocations, drivers]);
+    }, [updateMarkers]);
 
-    const fetchDriverLocations = () => {
+    const fetchDriverLocations = useCallback(() => {
         setDriverLocations(prev => {
             const updated = { ...prev };
             Object.keys(updated).forEach(id => {
@@ -192,9 +171,9 @@ const VendorDelivery = () => {
             });
             return updated;
         });
-    };
+    }, []);
 
-    const fetchDrivers = async () => {
+    const fetchDrivers = useCallback(async () => {
         try {
             const res = await fetch(`${API_BASE}/api/drivers`);
             const data = res.ok ? await res.json() : [];
@@ -232,7 +211,28 @@ const VendorDelivery = () => {
                 setDriverLocations(mockLocs);
             }
         }
-    };
+    }, [API_BASE, getStoredDrivers]);
+
+    useEffect(() => {
+        if (pdfList.length === 0) {
+            try {
+                const stored = JSON.parse(localStorage.getItem(DELIVERY_PAYLOAD_KEY) || "{}");
+                const fallbackList = [...(stored.auto || []), ...(stored.manual || [])];
+                if (fallbackList.length > 0) {
+                    setPdfList(fallbackList);
+                }
+            } catch {
+                // ignore
+            }
+        }
+        fetchDrivers();
+        loadGoogleMaps();
+        const interval = setInterval(fetchDriverLocations, 5000);
+        return () => {
+            clearInterval(interval);
+            markersRef.current.forEach(marker => marker.setMap(null));
+        };
+    }, [fetchDrivers, loadGoogleMaps, fetchDriverLocations, pdfList.length]);
 
     const handleDragStart = (e, pdf) => e.dataTransfer.setData('application/json', JSON.stringify(pdf));
     const handleDragOver = (e) => e.preventDefault();

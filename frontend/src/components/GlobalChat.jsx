@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import '../css/GlobalChat.css';
 import chatService from "../services/chatService";
@@ -21,17 +21,17 @@ const GlobalChat = () => {
   const isHospital = user.role === 'hospital';
   const isVendor = user.role === 'vendor';
 
-  const getSelfId = () => {
+  const getSelfId = useCallback(() => {
     if (isHospital) return `hospital_${user.hospitalId || "hospital-snu"}`;
     if (isVendor) return `vendor_${user.companyCode || "dh-pharm"}`;
     return "guest";
-  };
+  }, [isHospital, isVendor, user.companyCode, user.hospitalId]);
 
-  const getContactSelfId = (contactId) => {
+  const getContactSelfId = useCallback((contactId) => {
     if (!contactId) return "unknown";
     if (isHospital) return `vendor_${contactId}`;
     return `hospital_${contactId}`;
-  };
+  }, [isHospital]);
 
   const contacts = useMemo(() => {
     if (isHospital) {
@@ -67,7 +67,7 @@ const GlobalChat = () => {
         order: last?.timestamp ? new Date(last.timestamp).getTime() : -(idx + 1),
       };
     }).sort((a, b) => b.order - a.order);
-  }, [contacts, currentContext]);
+  }, [contacts, currentContext, getContactSelfId, getSelfId]);
 
   useEffect(() => {
     if (!selectedContactId && contacts.length > 0) {
@@ -101,7 +101,7 @@ const GlobalChat = () => {
       selfId: getSelfId(),
       otherId: getContactSelfId(selectedContactId)
     });
-  }, [selectedContactId, currentContext]);
+  }, [selectedContactId, currentContext, getContactSelfId, getSelfId]);
 
   useEffect(() => {
     if (isOpen && chatKey) {

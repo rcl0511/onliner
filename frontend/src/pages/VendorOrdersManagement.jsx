@@ -5,7 +5,6 @@ import authStorage from "../services/authStorage";
 
 const VendorOrdersManagement = () => {
     const [orders, setOrders] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [selectedOrders, setSelectedOrders] = useState(new Set());
@@ -33,7 +32,6 @@ const VendorOrdersManagement = () => {
                 }));
 
             setOrders([...(base || []), ...mapped]);
-            setLoading(false);
         };
 
         loadOrders();

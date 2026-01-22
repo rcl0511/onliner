@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import SignaturePad from '../components/SignaturePad';
@@ -13,36 +13,11 @@ const HospitalInvoice = () => {
   const [signature, setSignature] = useState(null);
   const [signatureMetadata, setSignatureMetadata] = useState(null);
   const [showDisputeModal, setShowDisputeModal] = useState(false);
-  const [disputeReason, setDisputeReason] = useState('');
   const [disputeType, setDisputeType] = useState('');
   const [disputeMemo, setDisputeMemo] = useState('');
   const [showSignatureInfo, setShowSignatureInfo] = useState(false);
 
-  // 1회성 링크 처리 (토큰 기반 접속)
-  useEffect(() => {
-    const token = searchParams.get('token');
-    if (token) {
-      // 토큰 검증 (실제로는 서버에서 검증)
-      // 24시간 유효성 체크
-      console.log('1회성 링크로 접속:', token);
-    }
-
-    // 명세서 데이터 로드 (실제로는 API 호출)
-    loadInvoice();
-  }, [invoiceId, searchParams]);
-
-  // 명세서 로드 후 해당 명세서의 서명 불러오기
-  useEffect(() => {
-    if (invoiceId) {
-      const saved = signatureService.getSignature(invoiceId);
-      if (saved) {
-        setSignature(saved.signatureData);
-        setSignatureMetadata(saved.metadata);
-      }
-    }
-  }, [invoiceId]);
-
-  const loadInvoice = () => {
+  const loadInvoice = useCallback(() => {
     // 임시 데이터
     const mockInvoice = {
       id: invoiceId || 'INV-2024-001',
@@ -85,7 +60,31 @@ const HospitalInvoice = () => {
     }
 
     setInvoice(mockInvoice);
-  };
+  }, [invoiceId]);
+
+  // 1회성 링크 처리 (토큰 기반 접속)
+  useEffect(() => {
+    const token = searchParams.get('token');
+    if (token) {
+      // 토큰 검증 (실제로는 서버에서 검증)
+      // 24시간 유효성 체크
+      console.log('1회성 링크로 접속:', token);
+    }
+
+    // 명세서 데이터 로드 (실제로는 API 호출)
+    loadInvoice();
+  }, [searchParams, loadInvoice]);
+
+  // 명세서 로드 후 해당 명세서의 서명 불러오기
+  useEffect(() => {
+    if (invoiceId) {
+      const saved = signatureService.getSignature(invoiceId);
+      if (saved) {
+        setSignature(saved.signatureData);
+        setSignatureMetadata(saved.metadata);
+      }
+    }
+  }, [invoiceId]);
 
   const handleSignatureSave = async (signatureData) => {
     // 명세서별 개별 서명 저장 (메타데이터 포함)
