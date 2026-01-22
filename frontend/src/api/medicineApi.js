@@ -1,11 +1,84 @@
 // src/api/medicineApi.js
-const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080';
+import API_BASE from "./baseUrl";
+
 const BASE_URL = `${API_BASE}/api/medicines`;
+const FALLBACK_BASE = API_BASE.includes("localhost")
+  ? "https://onliner-xnpa.onrender.com"
+  : "http://localhost:8080";
+const CACHE_KEY = "medicines_cache";
+const DEFAULT_MEDICINES = [
+  { id: 1, name: "타이레놀 500mg", spec: "500mg", unitPrice: 500, basePrice: 500, code: "MED-001" },
+  { id: 2, name: "아스피린 100mg", spec: "100mg", unitPrice: 300, basePrice: 300, code: "MED-002" },
+  { id: 3, name: "게보린정", spec: "정", unitPrice: 800, basePrice: 800, code: "MED-003" },
+  { id: 4, name: "판콜에이내복액", spec: "병", unitPrice: 2000, basePrice: 2000, code: "MED-004" },
+  { id: 5, name: "베아제정", spec: "정", unitPrice: 150, basePrice: 150, code: "MED-005" },
+];
+
+const normalizeMedicine = (raw = {}, index = 0) => {
+  const name =
+    raw.name ||
+    raw.itemName ||
+    raw.medicineName ||
+    raw.productName ||
+    raw.drugName ||
+    `미지정 약품 ${index + 1}`;
+  const spec =
+    raw.spec ||
+    raw.standard ||
+    raw.specification ||
+    raw.unit ||
+    "";
+  const unitPrice =
+    raw.unitPrice ||
+    raw.basePrice ||
+    raw.price ||
+    raw.unit_price ||
+    0;
+  return {
+    id: raw.id || raw.medicineId || raw.productId || raw.code || `${index + 1}`,
+    name,
+    spec,
+    unitPrice,
+    basePrice: raw.basePrice || raw.unitPrice || unitPrice,
+    code: raw.code || raw.productCode || raw.medicineCode || `MED-${String(index + 1).padStart(3, "0")}`,
+  };
+};
 
 export const fetchAllMedicines = async () => {
-  const res = await fetch(BASE_URL);
-  if (!res.ok) throw new Error('의약품 목록 조회 실패');
-  return await res.json();
+  try {
+    const res = await fetch(BASE_URL);
+    if (!res.ok) throw new Error('의약품 목록 조회 실패');
+    const data = await res.json();
+    const normalized = Array.isArray(data)
+      ? data.map((item, idx) => normalizeMedicine(item, idx))
+      : [];
+    localStorage.setItem(CACHE_KEY, JSON.stringify(normalized));
+    return normalized;
+  } catch (error) {
+    try {
+      const res = await fetch(`${FALLBACK_BASE}/api/medicines`);
+      if (!res.ok) throw new Error('의약품 목록 조회 실패');
+      const data = await res.json();
+      const normalized = Array.isArray(data)
+        ? data.map((item, idx) => normalizeMedicine(item, idx))
+        : [];
+      localStorage.setItem(CACHE_KEY, JSON.stringify(normalized));
+      return normalized;
+    } catch (fallbackError) {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          return Array.isArray(parsed)
+            ? parsed.map((item, idx) => normalizeMedicine(item, idx))
+            : DEFAULT_MEDICINES;
+        } catch {
+          return DEFAULT_MEDICINES;
+        }
+      }
+      return DEFAULT_MEDICINES;
+    }
+  }
 };
 
 export const uploadExcelFile = async (file) => {

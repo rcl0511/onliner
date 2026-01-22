@@ -1,3 +1,35 @@
+# 온라인 명세서 프론트엔드
+
+병원/도매업체 간 명세서 확인, 주문, 배송, 결제 및 문의 기능을 제공하는 React 앱입니다.
+
+## 주요 기능
+
+- 병원: 명세서 수신함, 명세서 확인/서명/이의신청, 주문서 작성, 결제 관리, 로그/마이페이지
+- 도매업체: 주문 관리, 재고/배송/거래장 조회, 명세서 발행
+- 배송 관리: 미할당 명세서 드래그 할당, 기사 추가, 지도 기반 위치 표시
+- 채팅: 대화목록 + 채팅창 구성, 로컬 동기화(테스트용)
+- 약품 API: 기본/폴백 서버 및 로컬 캐시 기반 로딩
+
+## 로컬 실행
+
+```bash
+npm install
+npm start
+```
+
+## 환경 변수
+
+- `REACT_APP_API_BASE_URL`: API 기본 주소 (예: `http://localhost:8080`)
+
+## 데이터 저장 방식 (테스트용)
+
+- 로그인/권한: `sessionStorage` 기반(`authStorage`)
+- 주문서 전송: `localStorage.hospital_orders_outbox`
+- 채팅 메시지: `localStorage.chat_messages_*`
+- 약품 캐시: `localStorage.medicines_cache`
+
+---
+
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).

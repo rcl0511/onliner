@@ -1,16 +1,12 @@
 // src/components/RequireAuth.jsx
 import React from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
+import authStorage from "../services/authStorage";
 
 export default function RequireAuth({ role }) {
   const location = useLocation();
 
-  let user = {};
-  try {
-    user = JSON.parse(localStorage.getItem("userInfo")) || {};
-  } catch {
-    user = {};
-  }
+  const user = authStorage.getUser();
 
   // 로그인 정보가 없으면 해당 역할 로그인으로
   if (!user || !user.role) {

@@ -1,6 +1,7 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "온라인 명세서",
+  "name": "병원용 온라인 명세서 시스템",
+  "description": "병원용 명세서 확인 및 전자 서명 시스템",
   "icons": [
     {
       "src": "favicon.ico",
@@ -18,8 +19,11 @@
       "sizes": "512x512"
     }
   ],
-  "start_url": ".",
+  "start_url": "/hospital/inbox",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "orientation": "portrait-primary",
+  "theme_color": "#475BE8",
+  "background_color": "#F4F7FE",
+  "scope": "/",
+  "categories": ["business", "productivity"]
 }

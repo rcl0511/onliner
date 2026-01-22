@@ -1,20 +1,55 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import '../css/VendorOrdersManagement.css';
 import '../css/common.css';
+import authStorage from "../services/authStorage";
 
 const VendorOrdersManagement = () => {
     const [orders, setOrders] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [selectedOrders, setSelectedOrders] = useState(new Set());
+    const [detailOrder, setDetailOrder] = useState(null);
 
     useEffect(() => {
-        fetch('/vendor_orders.json')
-            .then(res => res.json())
-            .then(data => {
-                setOrders(data);
-            })
-            .catch(() => {});
+        const loadOrders = async () => {
+            const base = await fetch('/vendor_orders.json')
+                .then(res => res.json())
+                .catch(() => []);
+
+            const local = JSON.parse(localStorage.getItem("hospital_orders_outbox") || "[]");
+            const user = authStorage.getUser();
+            const companyCode = user.companyCode || "dh-pharm";
+            const mapped = local
+                .filter((o) => o.vendorCode === companyCode)
+                .map((o) => ({
+                    id: o.id,
+                    client: o.hospitalName || "병원",
+                    manager: "병원 담당자",
+                    status: o.status || "PENDING",
+                    total: o.totalAmount || 0,
+                    createdAt: o.createdAt,
+                    items: o.items || []
+                }));
+
+            setOrders([...(base || []), ...mapped]);
+            setLoading(false);
+        };
+
+        loadOrders();
+
+        const onStorage = (e) => {
+            if (e.key === "hospital_orders_outbox") {
+                loadOrders();
+            }
+        };
+        const onFocus = () => loadOrders();
+        window.addEventListener("storage", onStorage);
+        window.addEventListener("focus", onFocus);
+        return () => {
+            window.removeEventListener("storage", onStorage);
+            window.removeEventListener("focus", onFocus);
+        };
     }, []);
 
     const filteredOrders = useMemo(() => {
@@ -32,6 +67,13 @@ const VendorOrdersManagement = () => {
         if (next.has(id)) next.delete(id);
         else next.add(id);
         setSelectedOrders(next);
+    };
+
+    const updateLocalOrderStatus = (orderId, status) => {
+        const local = JSON.parse(localStorage.getItem("hospital_orders_outbox") || "[]");
+        const updated = local.map((o) => (o.id === orderId ? { ...o, status } : o));
+        localStorage.setItem("hospital_orders_outbox", JSON.stringify(updated));
+        setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status } : o)));
     };
 
     const getStatusStyle = (status) => {
@@ -103,7 +145,7 @@ const VendorOrdersManagement = () => {
                                 </td>
                                 <td style={{ padding: '16px', fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>{o.id}</td>
                                 <td style={{ padding: '16px', fontSize: '14px', color: '#1E293B' }}>{o.client}</td>
-                                <td style={{ padding: '16px', fontSize: '14px', color: '#64748B' }}>{o.date}</td>
+                                <td style={{ padding: '16px', fontSize: '14px', color: '#64748B' }}>{o.date || o.createdAt}</td>
                                 <td style={{ padding: '16px', fontSize: '14px', fontWeight: 600, color: '#1E293B' }}>{o.total?.toLocaleString()}원</td>
                                 <td style={{ padding: '16px' }}>
                                     <span style={{ 
@@ -115,13 +157,68 @@ const VendorOrdersManagement = () => {
                                     }}>{o.status}</span>
                                 </td>
                                 <td style={{ padding: '16px' }}>
-                                    <button className="btn-outline" style={{ fontSize: '12px', padding: '6px 12px' }}>상세보기</button>
+                                    <button
+                                        className="btn-outline"
+                                        style={{ fontSize: '12px', padding: '6px 12px' }}
+                                        onClick={() => setDetailOrder(o)}
+                                    >
+                                        상세보기
+                                    </button>
                                 </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
+
+            {detailOrder && (
+                <div className="modal-overlay" onClick={() => setDetailOrder(null)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <h3 style={{ marginTop: 0 }}>주문 상세</h3>
+                        <div style={{ marginBottom: '12px', color: '#64748B', fontSize: '13px' }}>
+                            {detailOrder.client} · {detailOrder.id}
+                        </div>
+                        {detailOrder.items && detailOrder.items.length > 0 ? (
+                            <table className="table">
+                                <thead>
+                                    <tr>
+                                        <th>품목명</th>
+                                        <th>규격</th>
+                                        <th>수량</th>
+                                        <th>단위</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {detailOrder.items.map((item, idx) => (
+                                        <tr key={`${detailOrder.id}-${idx}`}>
+                                            <td>{item.name}</td>
+                                            <td>{item.spec || "-"}</td>
+                                            <td>{item.quantity}</td>
+                                            <td>{item.unit}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        ) : (
+                            <div style={{ color: '#94A3B8', fontSize: '13px' }}>
+                                상세 품목 정보가 없습니다.
+                            </div>
+                        )}
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' }}>
+                            <button className="btn-secondary" onClick={() => setDetailOrder(null)}>닫기</button>
+                            <button
+                                className="btn-primary"
+                                onClick={() => {
+                                    updateLocalOrderStatus(detailOrder.id, "ACCEPTED");
+                                    setDetailOrder(null);
+                                }}
+                            >
+                                수락
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

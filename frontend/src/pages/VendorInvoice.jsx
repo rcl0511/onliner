@@ -1,15 +1,16 @@
 // src/components/VendorInvoice.jsx
-import React, { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import '../css/VendorInvoice.css';
+import authStorage from "../services/authStorage";
+import API_BASE from "../api/baseUrl";
+import { fetchAllMedicines } from "../api/medicineApi";
 
 const getTodayDateString = () => {
   return new Date().toISOString().slice(0, 10);
 };
 
 const VendorInvoice = () => {
-  const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080';
-  
   // (A) 재고 정보(제품 목록 + 단가) 불러오기
   const [stockItems, setStockItems] = useState([]);
   const [loadingStock, setLoadingStock] = useState(false);
@@ -42,6 +43,31 @@ const VendorInvoice = () => {
 
   const navigate = useNavigate();
 
+  // 초기 마운트 시 재고 정보 가져오기
+  useEffect(() => {
+    fetchStockItems();
+    fetchClients();
+    const user = authStorage.getUser();
+    const companyCode = user.companyCode || "dh-pharm";
+    const stored = JSON.parse(localStorage.getItem(`vendor_manual_invoices_${companyCode}`) || "[]");
+    if (stored.length > 0) {
+      setManualEntries(stored);
+    }
+  }, []);
+
+  useEffect(() => {
+    const user = authStorage.getUser();
+    const companyCode = user.companyCode || "dh-pharm";
+    localStorage.setItem(`vendor_manual_invoices_${companyCode}`, JSON.stringify(manualEntries));
+  }, [manualEntries]);
+
+  // 거래처 변경 시 이력 불러오기
+  useEffect(() => {
+    if (invoiceHeader.customerId) {
+      fetchOrderHistory(invoiceHeader.customerId);
+    }
+  }, [invoiceHeader.customerId]);
+
   // 가짜 제품명으로 마스킹하는 함수
   const maskProductName = (product) => {
     if (!product) return product;
@@ -57,12 +83,10 @@ const VendorInvoice = () => {
   };
 
   // (A-1) 재고 API 호출
-  const fetchStockItems = useCallback(async () => {
+  const fetchStockItems = async () => {
     setLoadingStock(true);
     try {
-      const res = await fetch(`${API_BASE}/api/medicines`);
-      if (!res.ok) throw new Error('재고 정보 조회 실패');
-      const data = await res.json();
+      const data = await fetchAllMedicines();
       // 가짜 제품명으로 마스킹
       const items = data.map((m) => {
         const masked = maskProductName(m);
@@ -80,10 +104,10 @@ const VendorInvoice = () => {
     } finally {
       setLoadingStock(false);
     }
-  }, [API_BASE]);
+  };
 
   // 거래처 목록 조회 (테스트 데이터)
-  const fetchClients = useCallback(async () => {
+  const fetchClients = async () => {
     // 실제 DB 대신 테스트 데이터 사용
     const testClients = [
       { id: 1, nameOriginal: '테스트병원A', nameInternal: '테스트병원A', code: 'TEST001' },
@@ -93,7 +117,7 @@ const VendorInvoice = () => {
       { id: 5, nameOriginal: '테스트병원E', nameInternal: '테스트병원E', code: 'TEST005' },
     ];
     setClients(testClients);
-  }, []);
+  };
 
   // 과거 주문 이력 조회
   const fetchOrderHistory = async (customerId) => {
@@ -124,22 +148,26 @@ const VendorInvoice = () => {
     }
   };
 
-  // 초기 마운트 시 재고 정보 가져오기
-  useEffect(() => {
-    fetchStockItems();
-    fetchClients();
-  }, [fetchStockItems, fetchClients]);
-
-  // 거래처 변경 시 이력 불러오기
-  useEffect(() => {
-    if (invoiceHeader.customerId) {
-      fetchOrderHistory(invoiceHeader.customerId);
-    }
-  }, [invoiceHeader.customerId]);
-
   // (B-2) 수기 명세서 헤더 변경 핸들러
   const handleHeaderChange = (e) => {
     const { name, value } = e.target;
+    if (name === "customerId") {
+      const selected = clients.find((c) => c.id.toString() === value);
+      setInvoiceHeader((prev) => ({
+        ...prev,
+        customerId: value,
+        customer: selected ? (selected.nameOriginal || selected.nameInternal || selected.code) : "",
+      }));
+      return;
+    }
+    if (name === "customer") {
+      setInvoiceHeader((prev) => ({
+        ...prev,
+        customer: value,
+        customerId: value ? "" : prev.customerId,
+      }));
+      return;
+    }
     setInvoiceHeader((prev) => ({
       ...prev,
       [name]: value,
@@ -218,8 +246,13 @@ const VendorInvoice = () => {
   // (B-8) 수기 명세서 저장 핸들러
   const handleManualSubmit = (e) => {
     e.preventDefault();
-    const { customer, invoiceDate } = invoiceHeader;
-    if (!customer || !invoiceDate) {
+    const { customer, customerId, invoiceDate } = invoiceHeader;
+    const selectedClient = customerId
+      ? clients.find((c) => c.id.toString() === customerId)
+      : null;
+    const resolvedCustomer =
+      customer || (selectedClient ? (selectedClient.nameOriginal || selectedClient.nameInternal || selectedClient.code) : "");
+    if (!resolvedCustomer || !invoiceDate) {
       alert('매출처와 명세일자는 반드시 입력해야 합니다.');
       return;
     }
@@ -238,7 +271,7 @@ const VendorInvoice = () => {
     const newKey = Date.now().toString();
     const newEntry = {
       key: newKey,
-      customer,
+      customer: resolvedCustomer,
       invoiceDate,
       lineItems: [...lineItems],
       grandTotal: calculateGrandTotal(),
@@ -314,7 +347,9 @@ const VendorInvoice = () => {
   const handleGoDelivery = () => {
     const manual = manualEntries.filter((e) => selectedManual.includes(e.key));
     const auto = results.filter((r) => selectedAuto.includes(r.key));
-    navigate('/vendor/delivery', { state: { manual, auto } });
+    const payload = { manual, auto };
+    localStorage.setItem("vendor_delivery_payload", JSON.stringify(payload));
+    navigate('/vendor/delivery', { state: payload });
   };
 
   return (

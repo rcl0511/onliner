@@ -1,0 +1,166 @@
+.hospital-dashboard {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.hospital-dashboard h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1E293B;
+  margin-bottom: 32px;
+}
+
+.dashboard-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.dashboard-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.dashboard-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  border-color: #475BE8;
+}
+
+.dashboard-card-label {
+  font-size: 14px;
+  color: #64748B;
+  margin-bottom: 12px;
+}
+
+.dashboard-card-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #1E293B;
+  margin-bottom: 8px;
+}
+
+.dashboard-card-action {
+  font-size: 13px;
+  color: #475BE8;
+  font-weight: 600;
+}
+
+.dashboard-section {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  border: 1px solid #E2E8F0;
+  margin-bottom: 24px;
+}
+
+.dashboard-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.dashboard-section-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.dashboard-recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dashboard-recent-item {
+  padding: 16px;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dashboard-recent-item:hover {
+  border-color: #475BE8;
+  background: #F8FAFF;
+}
+
+.recent-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.recent-item-id {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1E293B;
+}
+
+.recent-item-status {
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-unread {
+  background: #EEF2FF;
+  color: #475BE8;
+}
+
+.status-confirmed {
+  background: #D1FAE5;
+  color: #059669;
+}
+
+.recent-item-info {
+  display: flex;
+  gap: 16px;
+  font-size: 14px;
+  color: #64748B;
+}
+
+.recent-item-vendor {
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.recent-item-amount {
+  margin-left: auto;
+  font-weight: 700;
+  color: #1E293B;
+}
+
+.dashboard-loading {
+  text-align: center;
+  padding: 80px 20px;
+  color: #94A3B8;
+  font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  .hospital-dashboard {
+    padding: 16px;
+  }
+
+  .dashboard-summary-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../css/VendorLogin.css';
-
+import authStorage from "../services/authStorage";
 const VendorLogin = () => {
   const navigate = useNavigate();
   const [companyCode, setCompanyCode] = useState('');
@@ -70,7 +70,7 @@ const VendorLogin = () => {
       name: account.name,
       companyName: finalCompanyCode === 'dh-pharm' ? 'DH약품' : '테스트업체'
     };
-    localStorage.setItem('userInfo', JSON.stringify(userInfo));
+    authStorage.setUser(userInfo);
     navigate('/vendor/dashboard');
   };
 

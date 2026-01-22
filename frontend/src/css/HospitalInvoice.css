@@ -1,0 +1,474 @@
+.hospital-invoice-detail {
+  padding: 24px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.invoice-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.invoice-header h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #1E293B;
+}
+
+/* 2분할 레이아웃 */
+.invoice-split-layout {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 24px;
+}
+
+/* 왼쪽: 명세서 뷰어 */
+.invoice-viewer {
+  background: white;
+  border-radius: 12px;
+  padding: 32px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.invoice-document {
+  background: white;
+}
+
+.invoice-doc-header {
+  text-align: center;
+  border-bottom: 2px solid #1E293B;
+  padding-bottom: 16px;
+  margin-bottom: 32px;
+}
+
+.invoice-doc-header h2 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  color: #1E293B;
+}
+
+.invoice-version-badge {
+  margin-top: 12px;
+  padding: 8px 16px;
+  background: #FEF3C7;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #92400E;
+  display: inline-block;
+}
+
+.parent-invoice-ref {
+  margin-left: 8px;
+  font-size: 11px;
+  color: #64748B;
+  font-weight: 400;
+}
+
+.revision-history {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #E2E8F0;
+}
+
+.revision-history-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: #F8FAFC;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  border: 1px solid #E2E8F0;
+}
+
+.revision-version {
+  font-weight: 700;
+  color: #475BE8;
+  min-width: 40px;
+}
+
+.revision-details {
+  flex: 1;
+  font-size: 12px;
+}
+
+.revision-date {
+  color: #64748B;
+  margin-bottom: 4px;
+}
+
+.revision-status {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.revision-reason {
+  color: #1E293B;
+  margin-top: 4px;
+}
+
+.invoice-parties {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  margin-bottom: 32px;
+}
+
+.invoice-party h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748B;
+  margin-bottom: 12px;
+}
+
+.party-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1E293B;
+  margin: 0 0 8px 0;
+}
+
+.party-info {
+  font-size: 14px;
+  color: #64748B;
+  margin: 4px 0;
+}
+
+.invoice-meta {
+  display: flex;
+  gap: 32px;
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.meta-label {
+  font-size: 14px;
+  color: #64748B;
+  margin-right: 8px;
+}
+
+.meta-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.invoice-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 24px;
+}
+
+.invoice-items-table thead {
+  background: #F8FAFC;
+}
+
+.invoice-items-table th {
+  padding: 12px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748B;
+  border-bottom: 2px solid #E2E8F0;
+}
+
+.invoice-items-table td {
+  padding: 16px 12px;
+  font-size: 14px;
+  color: #1E293B;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.item-name {
+  font-weight: 700;
+  color: #1E293B;
+}
+
+.item-total {
+  font-weight: 700;
+  color: #475BE8;
+}
+
+.invoice-totals {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 2px solid #E2E8F0;
+}
+
+.invoice-total-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  font-size: 16px;
+  color: #1E293B;
+}
+
+.invoice-total-row.total {
+  font-size: 20px;
+  font-weight: 800;
+  color: #475BE8;
+  border-top: 2px solid #E2E8F0;
+  padding-top: 16px;
+  margin-top: 8px;
+}
+
+/* 오른쪽: 액션 패널 */
+.invoice-action-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.action-panel-section {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #E2E8F0;
+}
+
+.action-panel-section h3 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.action-btn-confirm,
+.action-btn-dispute,
+.action-btn-download {
+  width: 100%;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.action-btn-confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.invoice-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.info-item:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-size: 14px;
+  color: #64748B;
+}
+
+.info-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.status-unread {
+  color: #475BE8;
+}
+
+.status-confirmed {
+  color: #059669;
+}
+
+.status-disputed {
+  color: #DC2626;
+}
+
+/* 모달 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 32px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-content h2 {
+  margin: 0 0 24px 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1E293B;
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-form label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.modal-form textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.modal-actions button {
+  flex: 1;
+}
+
+.invoice-loading {
+  text-align: center;
+  padding: 80px 20px;
+  color: #94A3B8;
+  font-size: 16px;
+}
+
+/* 서명 메타데이터 */
+.signature-info {
+  margin-top: 12px;
+}
+
+.signature-metadata {
+  margin-top: 12px;
+  padding: 16px;
+  background: #F8FAFC;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+}
+
+.metadata-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #E2E8F0;
+  font-size: 13px;
+}
+
+.metadata-item:last-child {
+  border-bottom: none;
+}
+
+.metadata-label {
+  color: #64748B;
+  font-weight: 500;
+}
+
+.metadata-value {
+  color: #1E293B;
+  font-weight: 600;
+  text-align: right;
+  max-width: 60%;
+  word-break: break-word;
+}
+
+/* 반응형 */
+@media (max-width: 1200px) {
+  .invoice-split-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .invoice-action-panel {
+    order: -1;
+  }
+}
+
+@media (max-width: 768px) {
+  .hospital-invoice-detail {
+    padding: 16px;
+  }
+
+  .invoice-viewer {
+    padding: 20px;
+  }
+
+  .invoice-parties {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .invoice-meta {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .invoice-items-table {
+    font-size: 12px;
+  }
+
+  .invoice-items-table th,
+  .invoice-items-table td {
+    padding: 8px;
+  }
+}
+
+/* 채팅 플로팅 버튼 */
+.chat-floating-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #475BE8;
+  color: white;
+  border: none;
+  box-shadow: 0 4px 12px rgba(71, 91, 232, 0.3);
+  cursor: pointer;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  transition: all 0.3s;
+}
+
+.chat-floating-btn:hover {
+  background: #3B82F6;
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(71, 91, 232, 0.4);
+}

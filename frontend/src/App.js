@@ -14,6 +14,7 @@ import VendorDelivery from "./pages/VendorDelivery";
 
 import MainLayout from "./Layout/MainLayout";
 import RequireAuth from "./components/RequireAuth";
+import authStorage from "./services/authStorage";
 
 // ✅ 빈 페이지들 (아래 2번에서 생성)
 import HospitalDashboard from "./pages/HospitalDashboard";
@@ -21,6 +22,8 @@ import HospitalOrder from "./pages/HospitalOrder";
 import HospitalInvoice from "./pages/HospitalInvoice";
 import HospitalPayment from "./pages/HospitalPayment";
 import HospitalLogs from "./pages/HospitalLogs";
+import HospitalInbox from "./pages/HospitalInbox";
+import HospitalMyPage from "./pages/HospitalMyPage";
 
 import VendorInvoiceSave from "./pages/VendorInvoiceSave";
 import VendorAlarms from "./pages/VendorAlarms";
@@ -30,19 +33,14 @@ import SettingsGeneral from "./pages/SettingsGeneral";
 
 // 루트 경로에서 로그인 상태 확인 후 리다이렉트
 function RootRedirect() {
-  let user = {};
-  try {
-    user = JSON.parse(localStorage.getItem("userInfo")) || {};
-  } catch {
-    user = {};
-  }
+  const user = authStorage.getUser();
 
   // 로그인되어 있으면 해당 역할의 대시보드로
   if (user && user.role) {
     if (user.role === "vendor") {
       return <Navigate to="/vendor/dashboard" replace />;
     } else if (user.role === "hospital") {
-      return <Navigate to="/hospital/dashboard" replace />;
+      return <Navigate to="/hospital/inbox" replace />;
     }
   }
 
@@ -55,7 +53,7 @@ function RootRedirect() {
     name: '대표 관리자',
     companyName: 'DH약품'
   };
-  localStorage.setItem('userInfo', JSON.stringify(autoLoginUser));
+  authStorage.setUser(autoLoginUser);
   return <Navigate to="/vendor/dashboard" replace />;
 }
 
@@ -74,8 +72,10 @@ function App() {
         <Route element={<RequireAuth role="hospital" />}>
           <Route element={<MainLayout />}>
             <Route path="/hospital/dashboard" element={<HospitalDashboard />} />
+            <Route path="/hospital/inbox" element={<HospitalInbox />} />
+            <Route path="/hospital/invoice/:invoiceId" element={<HospitalInvoice />} />
+            <Route path="/hospital/mypage" element={<HospitalMyPage />} />
             <Route path="/hospital/order" element={<HospitalOrder />} />
-            <Route path="/hospital/invoice" element={<HospitalInvoice />} />
             <Route path="/hospital/payment" element={<HospitalPayment />} />
             <Route path="/hospital/logs" element={<HospitalLogs />} />
           </Route>

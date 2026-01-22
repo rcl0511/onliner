@@ -1,0 +1,149 @@
+.hospital-order {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 20px;
+}
+
+.order-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.order-subtitle {
+  margin-top: 6px;
+  color: #64748B;
+  font-size: 14px;
+}
+
+.order-summary-card {
+  min-width: 240px;
+  background: #ffffff;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 16px 18px;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+}
+
+.order-summary-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #475BE8;
+  margin-bottom: 12px;
+}
+
+.order-summary-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #64748B;
+  margin-bottom: 8px;
+}
+
+.order-summary-total {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid #E2E8F0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1E293B;
+}
+
+.order-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.order-section {
+  background: #ffffff;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.order-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.order-section-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #475BE8;
+  background: #EEF2FF;
+  padding: 4px 8px;
+  border-radius: 999px;
+}
+
+.order-target {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.order-items {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.order-item-row {
+  display: grid;
+  grid-template-columns: 1.4fr 120px 100px auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid #F1F5F9;
+  border-radius: 10px;
+  background: #F8FAFC;
+}
+
+.order-item-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.order-item-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #94A3B8;
+}
+
+.order-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.order-error {
+  background: #FEF2F2;
+  color: #DC2626;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.order-success {
+  margin-top: 12px;
+  background: #ECFDF3;
+  color: #16A34A;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .order-header {
+    flex-direction: column;
+  }
+
+  .order-item-row {
+    grid-template-columns: 1fr;
+  }
+}

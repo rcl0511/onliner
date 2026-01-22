@@ -1,7 +1,9 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import vectorLogo from "../assets/Vector.svg";
 import toggleIcon from "../assets/sidebar-left.svg";
+import GlobalChat from "../components/GlobalChat";
+import authStorage from "../services/authStorage";
 import "../css/MainLayout.css";
 
 const MainLayout = () => {
@@ -9,13 +11,7 @@ const MainLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const user = useMemo(() => {
-    try {
-      return JSON.parse(localStorage.getItem("userInfo")) || {};
-    } catch {
-      return {};
-    }
-  }, []);
+  const user = authStorage.getUser();
 
   const role = user.role; // "hospital" | "vendor"
 
@@ -37,9 +33,10 @@ const MainLayout = () => {
   };
 
   const hospitalMenu = [
+    navItem("수신함", "/hospital/inbox"),
+    navItem("마이페이지", "/hospital/mypage"),
     navItem("메인화면", "/hospital/dashboard"),
     navItem("주문서 작성하기", "/hospital/order"),
-    navItem("명세서 확인하기", "/hospital/invoice"),
     navItem("결제금액관리", "/hospital/payment"),
     navItem("기타", "/hospital/logs"),
   ];
@@ -97,7 +94,7 @@ const MainLayout = () => {
   ];
 
   const onLogout = () => {
-    localStorage.removeItem("userInfo");
+    authStorage.clearUser();
     navigate(role === "vendor" ? "/vendor/login" : "/hospital/login");
   };
 
@@ -184,6 +181,9 @@ const MainLayout = () => {
         )}
         <Outlet />
       </main>
+
+      {/* 전역 채팅 컴포넌트 */}
+      {role && <GlobalChat />}
     </div>
   );
 };

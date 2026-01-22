@@ -6,6 +6,7 @@ import '../css/common.css';
 const VendorDashboard = () => {
     const navigate = useNavigate();
     const [orders, setOrders] = useState([]);
+    const [clients, setClients] = useState([]);
     const [todaySales, setTodaySales] = useState({});
     const [deliveryStats, setDeliveryStats] = useState({});
     const [lowStockItems, setLowStockItems] = useState([]);

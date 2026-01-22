@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import '../css/VendorStocks.css';
 import '../css/common.css';
 
@@ -36,7 +36,7 @@ const VendorStocks = () => {
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
 
-  const fetchMedicines = useCallback(() => {
+  useEffect(() => {
     fetch(`${API_BASE}/api/medicines`)
       .then(res => res.json())
       .then(data => {
@@ -47,11 +47,7 @@ const VendorStocks = () => {
         setMedicines(maskedMedicines);
       })
       .catch(console.error);
-  }, [API_BASE]);
-
-  useEffect(() => {
-    fetchMedicines();
-  }, [fetchMedicines]);
+  }, []);
 
   const filteredMedicines = medicines.filter(m => 
     selectedWarehouse === 'ALL' || m.warehouseId === parseInt(selectedWarehouse)

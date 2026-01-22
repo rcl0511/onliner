@@ -1,8 +1,11 @@
 // src/pages/VendorDelivery.jsx
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import '../css/VendorDelivery.css';
 import '../css/common.css';
+
+const LOCAL_DRIVER_KEY = "vendor_drivers";
+const DELIVERY_PAYLOAD_KEY = "vendor_delivery_payload";
 
 const VendorDelivery = () => {
     const location = useLocation();
@@ -17,35 +20,96 @@ const VendorDelivery = () => {
     const [driverLocations, setDriverLocations] = useState({});
     const [selectedDriver, setSelectedDriver] = useState(null);
     const [showSignatureModal, setShowSignatureModal] = useState(null);
+    const [newDriverName, setNewDriverName] = useState("");
+    const [newDriverPhone, setNewDriverPhone] = useState("");
+    const [pdfMetaMap, setPdfMetaMap] = useState({});
 
     // 구글 맵 API 키 (사용자 제공)
     const GOOGLE_MAPS_API_KEY = 'AIzaSyCeAo-v9T_jpuvDn8kwpWtl8f0KOnnLXuc';
-
     const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080';
 
-    const fetchDrivers = useCallback(async () => {
+    const getStoredDrivers = () => {
         try {
-            const res = await fetch(`${API_BASE}/api/drivers`);
-            const data = res.ok ? await res.json() : [];
-            setDrivers(data);
-            const initial = {};
-            const mockLocs = {};
-            data.forEach((d) => {
-                initial[d.id] = [];
-                mockLocs[d.id] = {
-                    lat: 37.5665 + (Math.random() - 0.5) * 0.1,
-                    lng: 126.9780 + (Math.random() - 0.5) * 0.1,
-                    status: ['배송중', '대기중'][Math.floor(Math.random() * 2)]
+            return JSON.parse(localStorage.getItem(LOCAL_DRIVER_KEY) || "[]");
+        } catch {
+            return [];
+        }
+    };
+
+    useEffect(() => {
+        if (pdfList.length === 0) {
+            try {
+                const stored = JSON.parse(localStorage.getItem(DELIVERY_PAYLOAD_KEY) || "{}");
+                const fallbackList = [...(stored.auto || []), ...(stored.manual || [])];
+                if (fallbackList.length > 0) {
+                    setPdfList(fallbackList);
+                }
+            } catch {
+                // ignore
+            }
+        }
+        fetchDrivers();
+        loadGoogleMaps();
+        const interval = setInterval(fetchDriverLocations, 5000);
+        return () => {
+            clearInterval(interval);
+            markersRef.current.forEach(marker => marker.setMap(null));
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!pdfList.length) return;
+        setPdfMetaMap((prev) => {
+            const next = { ...prev };
+            pdfList.forEach((pdf, idx) => {
+                if (!pdf?.key || next[pdf.key]) return;
+                const items = pdf.lineItems || pdf.items || [];
+                const totalQty = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+                const hospitalName =
+                    pdf.customer ||
+                    pdf.hospitalName ||
+                    pdf.client ||
+                    pdf.clientName ||
+                    pdf.hospital ||
+                    "병원";
+                next[pdf.key] = {
+                    title: hospitalName,
+                    subtitle: items.length > 0 ? `품목 ${items.length} · 수량 ${totalQty}` : (pdf.originalName || pdf.fileName || pdf.key),
                 };
             });
-            setAssignments(initial);
-            setDriverLocations(mockLocs);
-        } catch (err) {
-            console.error(err);
-        }
-    }, [API_BASE]);
+            return next;
+        });
+    }, [pdfList]);
 
-    const updateMarkers = useCallback(() => {
+    const loadGoogleMaps = () => {
+        if (window.google && window.google.maps) {
+            initMap();
+            return;
+        }
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=geometry`;
+        script.async = true;
+        script.defer = true;
+        script.onload = initMap;
+        document.head.appendChild(script);
+    };
+
+    const initMap = () => {
+        if (!mapRef.current || !window.google) return;
+        const map = new window.google.maps.Map(mapRef.current, {
+            center: { lat: 37.5665, lng: 126.9780 },
+            zoom: 12,
+            disableDefaultUI: false,
+            styles: [
+                { featureType: "poi", stylers: [{ visibility: "off" }] },
+                { featureType: "transit", stylers: [{ visibility: "off" }] }
+            ]
+        });
+        mapInstanceRef.current = map;
+        updateMarkers();
+    };
+
+    const updateMarkers = () => {
         if (!mapInstanceRef.current || !window.google) return;
         markersRef.current.forEach(m => m.setMap(null));
         markersRef.current = [];
@@ -110,49 +174,11 @@ const VendorDelivery = () => {
 
             markersRef.current.push(marker);
         });
+    };
+
+    useEffect(() => {
+        updateMarkers();
     }, [driverLocations, drivers]);
-
-    const initMap = useCallback(() => {
-        if (!mapRef.current || !window.google) return;
-        const map = new window.google.maps.Map(mapRef.current, {
-            center: { lat: 37.5665, lng: 126.9780 },
-            zoom: 12,
-            disableDefaultUI: false,
-            styles: [
-                { featureType: "poi", stylers: [{ visibility: "off" }] },
-                { featureType: "transit", stylers: [{ visibility: "off" }] }
-            ]
-        });
-        mapInstanceRef.current = map;
-        updateMarkers();
-    }, [updateMarkers]);
-
-    const loadGoogleMaps = useCallback(() => {
-        if (window.google && window.google.maps) {
-            initMap();
-            return;
-        }
-        const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=geometry&loading=async`;
-        script.async = true;
-        script.defer = true;
-        script.onload = initMap;
-        document.head.appendChild(script);
-    }, [GOOGLE_MAPS_API_KEY, initMap]);
-
-    useEffect(() => {
-        fetchDrivers();
-        loadGoogleMaps();
-        const interval = setInterval(fetchDriverLocations, 5000);
-        return () => {
-            clearInterval(interval);
-            markersRef.current.forEach(marker => marker.setMap(null));
-        };
-    }, [fetchDrivers, loadGoogleMaps]);
-
-    useEffect(() => {
-        updateMarkers();
-    }, [updateMarkers]);
 
     const fetchDriverLocations = () => {
         setDriverLocations(prev => {
@@ -166,6 +192,46 @@ const VendorDelivery = () => {
             });
             return updated;
         });
+    };
+
+    const fetchDrivers = async () => {
+        try {
+            const res = await fetch(`${API_BASE}/api/drivers`);
+            const data = res.ok ? await res.json() : [];
+            const local = getStoredDrivers();
+            const merged = [...data, ...local];
+            setDrivers(merged);
+            const initial = {};
+            const mockLocs = {};
+            merged.forEach((d) => {
+                initial[d.id] = [];
+                mockLocs[d.id] = {
+                    lat: 37.5665 + (Math.random() - 0.5) * 0.1,
+                    lng: 126.9780 + (Math.random() - 0.5) * 0.1,
+                    status: ['배송중', '대기중'][Math.floor(Math.random() * 2)]
+                };
+            });
+            setAssignments(initial);
+            setDriverLocations(mockLocs);
+        } catch (err) {
+            console.error(err);
+            const local = getStoredDrivers();
+            if (local.length > 0) {
+                setDrivers(local);
+                const initial = {};
+                const mockLocs = {};
+                local.forEach((d) => {
+                    initial[d.id] = [];
+                    mockLocs[d.id] = {
+                        lat: 37.5665 + (Math.random() - 0.5) * 0.1,
+                        lng: 126.9780 + (Math.random() - 0.5) * 0.1,
+                        status: ['배송중', '대기중'][Math.floor(Math.random() * 2)]
+                    };
+                });
+                setAssignments(initial);
+                setDriverLocations(mockLocs);
+            }
+        }
     };
 
     const handleDragStart = (e, pdf) => e.dataTransfer.setData('application/json', JSON.stringify(pdf));
@@ -188,6 +254,34 @@ const VendorDelivery = () => {
         const assigned = assignments[driverId] || [];
         if (assigned.length === 0) return 0;
         return 70; // Mock 70%
+    };
+
+    const handleAddDriver = () => {
+        const name = newDriverName.trim();
+        if (!name) {
+            alert("기사 이름을 입력하세요.");
+            return;
+        }
+        const local = getStoredDrivers();
+        const newDriver = {
+            id: `local-${Date.now()}`,
+            name,
+            phone: newDriverPhone.trim()
+        };
+        const nextDrivers = [...local, newDriver];
+        localStorage.setItem(LOCAL_DRIVER_KEY, JSON.stringify(nextDrivers));
+        setDrivers((prev) => [...prev, newDriver]);
+        setAssignments((prev) => ({ ...prev, [newDriver.id]: [] }));
+        setDriverLocations((prev) => ({
+            ...prev,
+            [newDriver.id]: {
+                lat: 37.5665 + (Math.random() - 0.5) * 0.1,
+                lng: 126.9780 + (Math.random() - 0.5) * 0.1,
+                status: '대기중'
+            }
+        }));
+        setNewDriverName("");
+        setNewDriverPhone("");
     };
 
     return (
@@ -220,7 +314,12 @@ const VendorDelivery = () => {
                             {pdfList.map((r) => (
                                 <div key={r.key} className="pdf-card" draggable onDragStart={(e) => handleDragStart(e, r)} 
                                      style={{ background: 'white', border: '1px solid #E2E8F0', padding: '12px', borderRadius: '8px', marginBottom: '8px', cursor: 'grab' }}>
-                                    <p style={{ margin: 0, fontWeight: 500, fontSize: '14px' }}>{r.originalName || r.fileName}</p>
+                                    <p style={{ margin: 0, fontWeight: 700, fontSize: '14px', color: '#1E293B' }}>
+                                        {pdfMetaMap[r.key]?.title || r.originalName || r.fileName || "병원"}
+                                    </p>
+                                    <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#64748B' }}>
+                                        {pdfMetaMap[r.key]?.subtitle || "명세서 정보 없음"}
+                                    </p>
                                 </div>
                             ))}
                         </div>
@@ -229,6 +328,25 @@ const VendorDelivery = () => {
 
                 <div className="drivers-area" style={{ flex: 1 }}>
                     <h3 className="area-heading" style={{ paddingLeft: '20px', fontSize: '18px' }}>배송 기사 목록</h3>
+                    <div style={{ padding: '0 20px 12px' }}>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            <input
+                                className="input-field"
+                                placeholder="기사 이름"
+                                value={newDriverName}
+                                onChange={(e) => setNewDriverName(e.target.value)}
+                                style={{ minWidth: '180px' }}
+                            />
+                            <input
+                                className="input-field"
+                                placeholder="연락처"
+                                value={newDriverPhone}
+                                onChange={(e) => setNewDriverPhone(e.target.value)}
+                                style={{ minWidth: '180px' }}
+                            />
+                            <button className="btn-primary" onClick={handleAddDriver}>기사 추가</button>
+                        </div>
+                    </div>
                     <div className="driver-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px', padding: '0 20px' }}>
                         {drivers.map((d) => (
                             <div key={d.id} className="driver-card" onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, d.id)}
@@ -258,7 +376,11 @@ const VendorDelivery = () => {
                                     <p style={{ fontSize: '12px', fontWeight: 600, color: '#94A3B8', marginBottom: '8px' }}>할당된 명세서</p>
                                     {(assignments[d.id] || []).length === 0 ? <span style={{ fontSize: '12px', color: '#CBD5E1' }}>할당 없음</span> : (
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                                            {assignments[d.id].map(k => <span key={k} style={{ fontSize: '11px', background: '#E3F2FD', color: '#475BE8', padding: '2px 6px', borderRadius: '4px' }}>{k}</span>)}
+                                            {assignments[d.id].map(k => (
+                                                <span key={k} style={{ fontSize: '11px', background: '#E3F2FD', color: '#475BE8', padding: '2px 6px', borderRadius: '4px' }}>
+                                                    {pdfMetaMap[k]?.title || k}
+                                                </span>
+                                            ))}
                                         </div>
                                     )}
                                 </div>
