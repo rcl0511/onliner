@@ -274,6 +274,13 @@
   margin: 0;
 }
 
+.global-message-read {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #94A3B8;
+  text-align: right;
+}
+
 .global-file-message {
   display: flex;
   align-items: center;

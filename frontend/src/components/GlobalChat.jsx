@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import '../css/GlobalChat.css';
 import chatService from "../services/chatService";
 import authStorage from "../services/authStorage";
+import wsChatService from "../services/wsChatService";
 
 const GlobalChat = () => {
   const location = useLocation();
@@ -14,6 +15,7 @@ const GlobalChat = () => {
   const [currentContext, setCurrentContext] = useState(null);
   const [selectedContactId, setSelectedContactId] = useState('');
   const messagesEndRef = useRef(null);
+  const [readStatus, setReadStatus] = useState(null);
 
   const user = authStorage.getUser();
   const isHospital = user.role === 'hospital';
@@ -110,6 +112,43 @@ const GlobalChat = () => {
   }, [isOpen, chatKey]);
 
   useEffect(() => {
+    if (!chatKey) return;
+    wsChatService.connect();
+    wsChatService.joinRoom(chatKey);
+    const unsubscribe = wsChatService.subscribe((payload) => {
+      if (payload?.roomId && payload.roomId !== chatKey) return;
+      if (payload?.type === "read") {
+        setReadStatus({
+          readerId: payload.readerId,
+          lastReadId: payload.lastReadId,
+          timestamp: payload.serverTimestamp || payload.timestamp,
+        });
+        return;
+      }
+      if (payload?.type && payload.type !== "chat") return;
+      const incoming = {
+        id: payload.id || payload.clientMessageId || Date.now(),
+        sender: payload.sender || "unknown",
+        senderName: payload.senderName || "상대방",
+        message: payload.message || "",
+        timestamp: payload.timestamp || payload.serverTimestamp || new Date().toISOString(),
+        type: payload.messageType || "text",
+        context: currentContext,
+      };
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === incoming.id)) {
+          return prev;
+        }
+        return [...prev, incoming];
+      });
+      if (!isOpen) {
+        setUnreadCount((prev) => prev + 1);
+      }
+    });
+    return () => unsubscribe();
+  }, [chatKey, isOpen, currentContext]);
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
@@ -140,6 +179,17 @@ const GlobalChat = () => {
     return () => clearInterval(interval);
   }, [chatKey]);
 
+  useEffect(() => {
+    if (!isOpen || !chatKey || messages.length === 0) return;
+    const lastMessage = messages[messages.length - 1];
+    wsChatService.send({
+      type: "read",
+      roomId: chatKey,
+      lastReadId: lastMessage.id,
+      timestamp: new Date().toISOString(),
+    });
+  }, [isOpen, chatKey, messages]);
+
   const handleSend = (e) => {
     e.preventDefault();
     if (!newMessage.trim() || !chatKey) return;
@@ -157,6 +207,16 @@ const GlobalChat = () => {
     chatService.saveMessage(chatKey, message);
     setMessages((prev) => [...prev, message]);
     setNewMessage('');
+    wsChatService.send({
+      type: "chat",
+      roomId: chatKey,
+      id: message.id,
+      sender: message.sender,
+      senderName: message.senderName,
+      message: message.message,
+      timestamp: message.timestamp,
+      messageType: "text",
+    });
   };
 
   const handleInputChange = (e) => {
@@ -185,6 +245,16 @@ const GlobalChat = () => {
 
     chatService.saveMessage(chatKey, fileMessage);
     setMessages((prev) => [...prev, fileMessage]);
+    wsChatService.send({
+      type: "chat",
+      roomId: chatKey,
+      id: fileMessage.id,
+      sender: fileMessage.sender,
+      senderName: fileMessage.senderName,
+      message: fileMessage.message,
+      timestamp: fileMessage.timestamp,
+      messageType: "file",
+    });
   };
 
   const toggleChat = () => {
@@ -270,6 +340,9 @@ const GlobalChat = () => {
                           <p>{msg.message}</p>
                         )}
                       </div>
+                      {readStatus?.lastReadId === msg.id && msg.sender === (isHospital ? 'hospital' : 'vendor') && (
+                        <div className="global-message-read">읽음</div>
+                      )}
                     </div>
                   ))}
                   
