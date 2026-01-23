@@ -1,7 +1,9 @@
 // src/pages/VendorClientManagement.jsx
 import React, { useMemo, useEffect, useState } from "react";
-import axios from "axios";
 import "../css/VendorClientManagement.css";
+import { http } from "../api/http";
+import authFetch from "../api/authFetch";
+import API_BASE from "../api/baseUrl";
 
 const clientFields = [
   { name: "classification", label: "거래처구분", type: "text" },
@@ -54,8 +56,7 @@ const buildEmptyClient = () =>
     return acc;
   }, {});
 
-const API_ORIGIN = process.env.REACT_APP_API_BASE_URL || "http://localhost:8080";
-const BASE_URL = `${API_ORIGIN}/api/vendors/clients`;
+const BASE_URL = `${API_BASE}/api/vendors/clients`;
 
 // 가짜 데이터로 마스킹하는 함수 (Netlify 배포용)
 const maskClientData = (client) => {
@@ -102,7 +103,7 @@ export default function VendorClientManagement() {
   const loadClients = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(BASE_URL);
+      const res = await http.get(BASE_URL);
       // 가짜 데이터로 마스킹 (Netlify 배포용)
       const maskedClients = Array.isArray(res.data) 
         ? res.data.map(client => maskClientData(client))
@@ -141,7 +142,7 @@ export default function VendorClientManagement() {
   // 제품 목록 조회 (단가 설정용)
   const fetchProducts = async () => {
     try {
-      const res = await fetch(`${API_ORIGIN}/api/medicines`);
+      const res = await authFetch(`${API_BASE}/api/medicines`);
       if (res.ok) {
         const data = await res.json();
         setProducts(data.slice(0, 50)); // 처음 50개만
@@ -184,7 +185,7 @@ export default function VendorClientManagement() {
     formData.append("file", excelFile);
 
     try {
-      await axios.post(`${BASE_URL}/upload`, formData, {
+      await http.post(`${BASE_URL}/upload`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       alert("엑셀 업로드 성공");
@@ -213,7 +214,7 @@ export default function VendorClientManagement() {
     }
 
     try {
-      await axios.post(BASE_URL, newClient);
+      await http.post(BASE_URL, newClient);
       alert("거래처 추가 완료");
       setShowForm(false);
       setNewClient(buildEmptyClient());

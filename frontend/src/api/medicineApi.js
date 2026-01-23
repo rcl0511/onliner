@@ -1,5 +1,6 @@
 // src/api/medicineApi.js
 import API_BASE from "./baseUrl";
+import authFetch from "./authFetch";
 
 const BASE_URL = `${API_BASE}/api/medicines`;
 const FALLBACK_BASE = API_BASE.includes("localhost")
@@ -46,7 +47,7 @@ const normalizeMedicine = (raw = {}, index = 0) => {
 
 export const fetchAllMedicines = async () => {
   try {
-    const res = await fetch(BASE_URL);
+    const res = await authFetch(BASE_URL);
     if (!res.ok) throw new Error('의약품 목록 조회 실패');
     const data = await res.json();
     const normalized = Array.isArray(data)
@@ -56,7 +57,7 @@ export const fetchAllMedicines = async () => {
     return normalized;
   } catch (error) {
     try {
-      const res = await fetch(`${FALLBACK_BASE}/api/medicines`);
+      const res = await authFetch(`${FALLBACK_BASE}/api/medicines`);
       if (!res.ok) throw new Error('의약품 목록 조회 실패');
       const data = await res.json();
       const normalized = Array.isArray(data)
@@ -84,7 +85,7 @@ export const fetchAllMedicines = async () => {
 export const uploadExcelFile = async (file) => {
   const formData = new FormData();
   formData.append('file', file);
-  const res = await fetch(`${BASE_URL}/upload`, { method: 'POST', body: formData });
+  const res = await authFetch(`${BASE_URL}/upload`, { method: 'POST', body: formData });
   if (!res.ok) {
     const errText = await res.text();
     throw new Error(errText);
@@ -93,7 +94,7 @@ export const uploadExcelFile = async (file) => {
 };
 
 export const updateMedicineById = async (id, payload) => {
-  const res = await fetch(`${BASE_URL}/${id}`, {
+  const res = await authFetch(`${BASE_URL}/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -107,7 +108,7 @@ export const updateMedicineById = async (id, payload) => {
 
 // (선택) 특정 ID 조회
 export const fetchMedicineById = async (id) => {
-  const res = await fetch(`${BASE_URL}/${id}`);
+  const res = await authFetch(`${BASE_URL}/${id}`);
   if (!res.ok) {
     const errText = await res.text();
     throw new Error(errText);

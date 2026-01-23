@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import '../css/HospitalLogin.css';
 import authStorage from "../services/authStorage";
+import API_BASE from "../api/baseUrl";
 
 const HospitalLogin = () => {
   const navigate = useNavigate();
@@ -35,33 +36,32 @@ const HospitalLogin = () => {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    
-    // 임시 계정 로그인 (전화번호 기반)
-    // 실제로는 서버 API 호출
-    const tempAccounts = {
-      '01012345678': { password: 'temp1234', requiresPasswordChange: true },
-      '01087654321': { password: 'temp1234', requiresPasswordChange: false },
-    };
+    setError('');
 
-    if (tempAccounts[phone] && tempAccounts[phone].password === password) {
-      const userInfo = {
-        phone,
-        role: 'hospital',
-        requiresPasswordChange: tempAccounts[phone].requiresPasswordChange,
-        name: '병원 담당자',
-        hospitalName: '서울대학교병원'
-      };
-      authStorage.setUser(userInfo);
-      
-      // 최초 로그인 시 비밀번호 변경 강제
-      if (tempAccounts[phone].requiresPasswordChange) {
-        setShowPasswordChange(true);
-      } else {
-        navigate('/hospital/inbox');
-      }
-    } else {
-      setError('전화번호 또는 비밀번호가 잘못되었습니다.');
-    }
+    fetch(`${API_BASE}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: 'hospital', phone, password }),
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const msg = await res.text();
+          throw new Error(msg || '로그인 실패');
+        }
+        return res.json();
+      })
+      .then((data) => {
+        authStorage.setUser(data.user);
+        authStorage.setToken(data.token);
+        if (data.user?.requiresPasswordChange) {
+          setShowPasswordChange(true);
+        } else {
+          navigate('/hospital/inbox');
+        }
+      })
+      .catch((err) => {
+        setError(err.message || '전화번호 또는 비밀번호가 잘못되었습니다.');
+      });
   };
 
   const handlePasswordChange = (e) => {
@@ -125,14 +125,14 @@ const HospitalLogin = () => {
             도매업체에서 발급한 임시 계정으로 로그인하세요
           </p>
 
-          <label className="hospital-login-label">전화번호</label>
+          <label className="hospital-login-label">아이디</label>
           <input
-            type="tel"
+            type="text"
             value={phone}
             onChange={e => setPhone(e.target.value)}
             required
             className="hospital-login-input"
-            placeholder="010-1234-5678"
+            placeholder="아이디 입력"
           />
 
           <label className="hospital-login-label">비밀번호</label>

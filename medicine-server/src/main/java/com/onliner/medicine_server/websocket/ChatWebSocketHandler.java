@@ -2,7 +2,11 @@ package com.onliner.medicine_server.websocket;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.onliner.medicine_server.auth.JwtService;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import org.springframework.lang.NonNull;
+import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -19,12 +23,18 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Component
 public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Set<WebSocketSession> sessions = ConcurrentHashMap.newKeySet();
     private final Map<String, Set<WebSocketSession>> rooms = new ConcurrentHashMap<>();
     private final Map<WebSocketSession, Set<String>> sessionRooms = new ConcurrentHashMap<>();
+    private final JwtService jwtService;
+
+    public ChatWebSocketHandler(JwtService jwtService) {
+        this.jwtService = jwtService;
+    }
 
     @Override
     public void afterConnectionEstablished(@NonNull WebSocketSession session) throws IOException {
@@ -33,8 +43,17 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             session.close(CloseStatus.NOT_ACCEPTABLE.withReason("missing token"));
             return;
         }
+        try {
+            Claims claims = jwtService.parseToken(token);
+            String subject = claims.getSubject();
+            String role = claims.get("role", String.class);
+            session.getAttributes().put("userId", subject);
+            session.getAttributes().put("role", role);
+        } catch (JwtException ex) {
+            session.close(CloseStatus.NOT_ACCEPTABLE.withReason("invalid token"));
+            return;
+        }
         sessions.add(session);
-        session.getAttributes().put("userId", token);
     }
 
     @Override

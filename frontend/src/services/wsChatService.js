@@ -22,15 +22,7 @@ class WsChatService {
   }
 
   buildToken() {
-    const user = authStorage.getUser();
-    if (!user || !user.role) return "";
-    if (user.role === "hospital") {
-      return `hospital:${user.hospitalId || "hospital-snu"}`;
-    }
-    if (user.role === "vendor") {
-      return `vendor:${user.companyCode || "dh-pharm"}`;
-    }
-    return "";
+    return authStorage.getToken();
   }
 
   connect() {

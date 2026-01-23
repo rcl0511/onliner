@@ -3,6 +3,8 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import '../css/VendorDelivery.css';
 import '../css/common.css';
+import authFetch from "../api/authFetch";
+import API_BASE from "../api/baseUrl";
 
 const LOCAL_DRIVER_KEY = "vendor_drivers";
 const DELIVERY_PAYLOAD_KEY = "vendor_delivery_payload";
@@ -26,7 +28,6 @@ const VendorDelivery = () => {
 
     // 구글 맵 API 키 (사용자 제공)
     const GOOGLE_MAPS_API_KEY = 'AIzaSyCeAo-v9T_jpuvDn8kwpWtl8f0KOnnLXuc';
-    const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080';
 
     const getStoredDrivers = useCallback(() => {
         try {
@@ -175,7 +176,7 @@ const VendorDelivery = () => {
 
     const fetchDrivers = useCallback(async () => {
         try {
-            const res = await fetch(`${API_BASE}/api/drivers`);
+            const res = await authFetch(`${API_BASE}/api/drivers`);
             const data = res.ok ? await res.json() : [];
             const local = getStoredDrivers();
             const merged = [...data, ...local];

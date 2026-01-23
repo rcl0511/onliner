@@ -1,11 +1,20 @@
 import axios from "axios";
-
-const baseURL = process.env.REACT_APP_API_BASE_URL || "http://localhost:8080";
+import API_BASE from "./baseUrl";
+import authStorage from "../services/authStorage";
 
 export const http = axios.create({
-  baseURL,
+  baseURL: API_BASE,
   headers: { "Content-Type": "application/json" },
   timeout: 20000,
+});
+
+http.interceptors.request.use((config) => {
+  const token = authStorage.getToken();
+  if (token) {
+    config.headers = config.headers || {};
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
 
 // 에러 메시지 통일

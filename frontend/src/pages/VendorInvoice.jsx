@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import '../css/VendorInvoice.css';
 import authStorage from "../services/authStorage";
 import API_BASE from "../api/baseUrl";
+import authFetch from "../api/authFetch";
 import { fetchAllMedicines } from "../api/medicineApi";
 
 const getTodayDateString = () => {
@@ -298,7 +299,7 @@ const VendorInvoice = () => {
     files.forEach((f) => formData.append('invoices', f));
 
     try {
-      const res = await fetch(`${API_BASE}/api/invoices/upload-multiple`, {
+      const res = await authFetch(`${API_BASE}/api/invoices/upload-multiple`, {
         method: 'POST',
         body: formData,
       });
@@ -350,6 +351,27 @@ const VendorInvoice = () => {
     const payload = { manual, auto };
     localStorage.setItem("vendor_delivery_payload", JSON.stringify(payload));
     navigate('/vendor/delivery', { state: payload });
+  };
+
+  const handleDownloadPdf = async (pdfUrl, filename) => {
+    try {
+      const res = await authFetch(`${API_BASE}${pdfUrl}`);
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || "다운로드 실패");
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename || "invoice.pdf";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(err.message || "다운로드에 실패했습니다.");
+    }
   };
 
   return (
@@ -677,14 +699,21 @@ const VendorInvoice = () => {
                   <h4 className="card-title">{r.originalName}</h4>
                   <p className="card-row">
                     생성된 PDF:{' '}
-                    <a
-                      href={`${API_BASE}${r.pdfUrl}`}
-                      download
-                      target="_blank"
-                      rel="noreferrer"
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadPdf(r.pdfUrl, filename)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        padding: 0,
+                        color: "#475BE8",
+                        cursor: "pointer",
+                        textDecoration: "underline",
+                        fontSize: "13px",
+                      }}
                     >
                       {filename}
-                    </a>
+                    </button>
                   </p>
                   {r.parsedText && (
                     <>

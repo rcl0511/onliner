@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
+import authStorage from "../services/authStorage";
 
 export default function SettingsGeneral() {
-  const user = JSON.parse(localStorage.getItem('userInfo')) || {};
+  const user = authStorage.getUser();
   const companyCode = user.companyCode || '';
   
   const [settings, setSettings] = useState({

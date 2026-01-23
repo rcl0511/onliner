@@ -7,9 +7,10 @@ export default function RequireAuth({ role }) {
   const location = useLocation();
 
   const user = authStorage.getUser();
+  const token = authStorage.getToken();
 
   // 로그인 정보가 없으면 해당 역할 로그인으로
-  if (!user || !user.role) {
+  if (!user || !user.role || !token) {
     const to = role === "vendor" ? "/vendor/login" : "/hospital/login";
     return <Navigate to={to} replace state={{ from: location }} />;
   }

@@ -14,10 +14,19 @@ public class WebSocketConfig implements WebSocketConfigurer {
     @Value("${cors.allowed.origins:http://localhost:3000,https://onlinerr.netlify.app}")
     private String allowedOrigins;
 
+    private final ChatWebSocketHandler chatWebSocketHandler;
+
+    public WebSocketConfig(ChatWebSocketHandler chatWebSocketHandler) {
+        this.chatWebSocketHandler = chatWebSocketHandler;
+    }
+
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         String[] origins = allowedOrigins.split(",");
-        registry.addHandler(new ChatWebSocketHandler(), "/ws/chat")
-                .setAllowedOriginPatterns(origins);
+        String[] originPatterns = new String[origins.length + 1];
+        System.arraycopy(origins, 0, originPatterns, 0, origins.length);
+        originPatterns[origins.length] = "https://*.netlify.app";
+        registry.addHandler(chatWebSocketHandler, "/ws/chat")
+                .setAllowedOriginPatterns(originPatterns);
     }
 }

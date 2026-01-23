@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import '../css/VendorStocks.css';
 import '../css/common.css';
+import authFetch from "../api/authFetch";
+import API_BASE from "../api/baseUrl";
 
 // 가짜 제품명과 제조사로 마스킹하는 함수
 const maskMedicineData = (medicine) => {
@@ -25,7 +27,6 @@ const maskMedicineData = (medicine) => {
 };
 
 const VendorStocks = () => {
-  const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080';
   const [medicines, setMedicines] = useState([]);
   const [warehouses] = useState([
     { id: 1, name: '인천 제1물류센터' },
@@ -37,7 +38,7 @@ const VendorStocks = () => {
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/medicines`)
+    authFetch(`${API_BASE}/api/medicines`)
       .then(res => res.json())
       .then(data => {
         // 가짜 데이터로 마스킹
@@ -71,7 +72,7 @@ const VendorStocks = () => {
     formData.append('file', file);
 
     try {
-      const res = await fetch(`${API_BASE}/api/medicines/upload-excel`, {
+      const res = await authFetch(`${API_BASE}/api/medicines/upload-excel`, {
         method: 'POST',
         body: formData,
       });
@@ -84,7 +85,7 @@ const VendorStocks = () => {
       alert(`엑셀 데이터 반입 완료: ${data.count || 0}개 항목이 업데이트되었습니다.`);
       
       // 재고 목록 새로고침
-      fetch(`${API_BASE}/api/medicines`)
+      authFetch(`${API_BASE}/api/medicines`)
         .then(res => res.json())
         .then(data => {
           // 가짜 데이터로 마스킹

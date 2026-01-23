@@ -4,8 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { FaSearch, FaPaperPlane, FaUpload } from 'react-icons/fa';
 import '../css/VendorLedger.css';
-
-const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080';
+import authFetch from "../api/authFetch";
+import API_BASE from "../api/baseUrl";
 
 const VendorLedger = () => {
   const [hospitals, setHospitals] = useState([]);
@@ -30,7 +30,7 @@ const VendorLedger = () => {
       setHospitals([]);
       return;
     }
-    fetch(`${API_BASE}/api/vendors/clients?q=${encodeURIComponent(query)}`)
+    authFetch(`${API_BASE}/api/vendors/clients?q=${encodeURIComponent(query)}`)
       .then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
@@ -54,7 +54,7 @@ const VendorLedger = () => {
     setLoading(true);
     const hospitalId = selected._id || selected.id;
 
-    fetch(
+    authFetch(
       `${API_BASE}/api/vendors/ledger?hospitalId=${hospitalId}&from=${fromDate}&to=${toDate}`
     )
       .then(res => {
@@ -102,7 +102,7 @@ const VendorLedger = () => {
       totalAmount
     };
 
-    fetch(`${API_BASE}/api/vendors/send-ledger-request`, {
+    authFetch(`${API_BASE}/api/vendors/send-ledger-request`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -145,7 +145,7 @@ const VendorLedger = () => {
     formData.append('to', toDate);
     formData.append('file', file);
 
-    fetch(`${API_BASE}/api/vendors/upload-ledger`, {
+    authFetch(`${API_BASE}/api/vendors/upload-ledger`, {
       method: 'POST',
       body: formData,
     })
