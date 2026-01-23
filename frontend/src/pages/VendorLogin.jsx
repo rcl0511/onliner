@@ -6,6 +6,7 @@ import authStorage from "../services/authStorage";
 import API_BASE from "../api/baseUrl";
 const VendorLogin = () => {
   const navigate = useNavigate();
+  const [companyCode, setCompanyCode] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -14,7 +15,15 @@ const VendorLogin = () => {
     e.preventDefault();
     setError('');
 
-    const finalCompanyCode = 'dh-pharm';
+    const finalCompanyCode = companyCode.trim().toLowerCase();
+    if (!finalCompanyCode) {
+      setError('업체 코드를 입력해주세요.');
+      return;
+    }
+    if (!email.trim()) {
+      setError('아이디를 입력해주세요.');
+      return;
+    }
 
     fetch(`${API_BASE}/api/auth/login`, {
       method: 'POST',
@@ -22,7 +31,7 @@ const VendorLogin = () => {
       body: JSON.stringify({
         role: 'vendor',
         companyCode: finalCompanyCode,
-        email,
+        email: email.trim(),
         password,
       }),
     })
@@ -48,14 +57,25 @@ const VendorLogin = () => {
       <form className="vendor-login-form" onSubmit={handleLogin}>
         <h2 className="vendor-login-title">도매업체 관리자 로그인</h2>
 
-        <label className="vendor-login-label">아이디</label>
+        <label className="vendor-login-label">업체 코드</label>
         <input
           type="text"
+          value={companyCode}
+          onChange={e => setCompanyCode(e.target.value)}
+          required
+          className="vendor-login-input"
+          placeholder="예: dh-pharm"
+          style={{ textTransform: 'lowercase' }}
+        />
+
+        <label className="vendor-login-label">아이디</label>
+        <input
+          type="email"
           value={email}
           onChange={e => setEmail(e.target.value)}
           required
           className="vendor-login-input"
-          placeholder="아이디 입력"
+          placeholder="예: master@dh-pharm.com"
         />
 
         <label className="vendor-login-label">비밀번호</label>

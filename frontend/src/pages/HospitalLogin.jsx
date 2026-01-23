@@ -125,14 +125,14 @@ const HospitalLogin = () => {
             도매업체에서 발급한 임시 계정으로 로그인하세요
           </p>
 
-          <label className="hospital-login-label">아이디</label>
+          <label className="hospital-login-label">아이디(전화번호)</label>
           <input
-            type="text"
+            type="tel"
             value={phone}
             onChange={e => setPhone(e.target.value)}
             required
             className="hospital-login-input"
-            placeholder="아이디 입력"
+            placeholder="01012345678"
           />
 
           <label className="hospital-login-label">비밀번호</label>
