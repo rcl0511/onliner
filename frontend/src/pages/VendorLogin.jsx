@@ -6,9 +6,10 @@ import authStorage from "../services/authStorage";
 import API_BASE from "../api/baseUrl";
 const VendorLogin = () => {
   const navigate = useNavigate();
-  const [companyCode, setCompanyCode] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  // 테스트용 기본 계정 (로그인 편의용 - 서버 등록 계정)
+  const [companyCode, setCompanyCode] = useState('dh-pharm');
+  const [email, setEmail] = useState('master@dh-pharm.com');
+  const [password, setPassword] = useState('1234');
   const [error, setError] = useState('');
 
   const handleLogin = async (e) => {
@@ -48,7 +49,12 @@ const VendorLogin = () => {
         navigate('/vendor/dashboard');
       })
       .catch((err) => {
-        setError(err.message || '아이디 또는 비밀번호가 잘못되었습니다.');
+        const msg = err.message || '';
+        if (msg === 'Failed to fetch' || msg.includes('Load failed') || msg.includes('NetworkError')) {
+          setError('서버에 연결할 수 없습니다. Render 서버가 켜지는 중일 수 있으니 1분 후 다시 시도해 주세요.');
+        } else {
+          setError(msg || '아이디 또는 비밀번호가 잘못되었습니다.');
+        }
       });
   };
 

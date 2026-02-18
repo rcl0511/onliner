@@ -10,7 +10,7 @@ spring:
 # CORS 허용 오리진 (쉼표로 구분)
 cors:
   allowed:
-    origins: http://localhost:3000,https://onlinerr.netlify.app,https://*.netlify.app
+    origins: http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001,http://127.0.0.1:5173,https://onlinerr.netlify.app,https://*.netlify.app
 
 # (선택) 로그 줄이기
 logging:

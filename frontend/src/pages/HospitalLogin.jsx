@@ -7,8 +7,9 @@ import API_BASE from "../api/baseUrl";
 const HospitalLogin = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
+  // 테스트용 기본 계정 (로그인 편의용)
+  const [phone, setPhone] = useState('01012345678');
+  const [password, setPassword] = useState('temp1234');
   const [error, setError] = useState('');
   const [showPasswordChange, setShowPasswordChange] = useState(false);
   const [newPassword, setNewPassword] = useState('');
@@ -46,7 +47,7 @@ const HospitalLogin = () => {
       .then(async (res) => {
         if (!res.ok) {
           const msg = await res.text();
-          throw new Error(msg || '로그인 실패');
+          throw new Error(msg || `로그인 실패 (${res.status})`);
         }
         return res.json();
       })
@@ -60,7 +61,12 @@ const HospitalLogin = () => {
         }
       })
       .catch((err) => {
-        setError(err.message || '전화번호 또는 비밀번호가 잘못되었습니다.');
+        const msg = err.message || '';
+        if (msg === 'Failed to fetch' || msg.includes('Load failed') || msg.includes('NetworkError')) {
+          setError('서버에 연결할 수 없습니다. Render 서버가 켜지는 중일 수 있으니 1분 후 다시 시도해 주세요.');
+        } else {
+          setError(msg || '전화번호 또는 비밀번호가 잘못되었습니다.');
+        }
       });
   };
 
