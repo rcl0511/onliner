@@ -48,7 +48,7 @@ const VendorStocks = () => {
         setMedicines(maskedMedicines);
       })
       .catch(console.error);
-  }, [API_BASE]);
+  }, []);
 
   const filteredMedicines = medicines.filter(m => 
     selectedWarehouse === 'ALL' || m.warehouseId === parseInt(selectedWarehouse)

@@ -212,7 +212,7 @@ const VendorDelivery = () => {
                 setDriverLocations(mockLocs);
             }
         }
-    }, [API_BASE, getStoredDrivers]);
+    }, [getStoredDrivers]);
 
     useEffect(() => {
         if (pdfList.length === 0) {
