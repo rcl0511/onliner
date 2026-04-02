@@ -2,7 +2,7 @@ package com.onliner.medicine_server.websocket;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.onliner.medicine_server.Repository.ChatMessageRepository;
+import com.onliner.medicine_server.repository.ChatMessageRepository;
 import com.onliner.medicine_server.auth.JwtService;
 import com.onliner.medicine_server.entity.ChatMessage;
 import io.jsonwebtoken.Claims;

@@ -1,4 +1,4 @@
-package com.onliner.medicine_server.Repository;
+package com.onliner.medicine_server.repository;
 
 import com.onliner.medicine_server.entity.ChatMessage;
 import org.springframework.data.jpa.repository.JpaRepository;

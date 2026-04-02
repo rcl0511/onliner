@@ -1,6 +1,6 @@
 package com.onliner.medicine_server.controller;
 
-import com.onliner.medicine_server.Repository.ChatMessageRepository;
+import com.onliner.medicine_server.repository.ChatMessageRepository;
 import com.onliner.medicine_server.entity.ChatMessage;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;

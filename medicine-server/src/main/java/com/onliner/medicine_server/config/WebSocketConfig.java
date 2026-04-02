@@ -3,6 +3,7 @@ package com.onliner.medicine_server.config;
 import com.onliner.medicine_server.websocket.ChatWebSocketHandler;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.lang.NonNull;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
@@ -21,7 +22,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
     }
 
     @Override
-    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+    public void registerWebSocketHandlers(@NonNull WebSocketHandlerRegistry registry) {
         String[] origins = allowedOrigins.split(",");
         String[] originPatterns = new String[origins.length + 1];
         System.arraycopy(origins, 0, originPatterns, 0, origins.length);

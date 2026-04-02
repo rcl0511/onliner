@@ -104,6 +104,9 @@ public class AuthService {
         if (request.phone() == null || request.password() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "phone/password required");
         }
+        if (userRepository == null || passwordEncoder == null || hospitalUserRepository == null) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "DB 연결 없음");
+        }
 
         User user = userRepository.findByIdentifier(request.phone())
                 .filter(u -> "hospital".equals(u.getRole()) && u.isActive())
@@ -135,6 +138,9 @@ public class AuthService {
     private LoginResponse loginVendor(LoginRequest request, JwtService jwtService) {
         if (request.companyCode() == null || request.email() == null || request.password() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "companyCode/email/password required");
+        }
+        if (userRepository == null || passwordEncoder == null || vendorUserRepository == null) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "DB 연결 없음");
         }
 
         String email = request.email().trim();

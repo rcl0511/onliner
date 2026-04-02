@@ -3,6 +3,7 @@ package com.onliner.medicine_server.config;
 
 import com.onliner.medicine_server.entity.*;
 import com.onliner.medicine_server.repository.*;
+import java.util.Objects;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -77,7 +78,7 @@ public class DataInitializer {
         userRepository.save(user);
 
         VendorUser vendorUser = VendorUser.builder()
-                .user(user)
+                .user(Objects.requireNonNull(user))
                 .companyCode(companyCode)
                 .companyName(companyName)
                 .permission(permission)
