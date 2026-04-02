@@ -2,10 +2,13 @@ package com.onliner.medicine_server.websocket;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.onliner.medicine_server.Repository.ChatMessageRepository;
 import com.onliner.medicine_server.auth.JwtService;
+import com.onliner.medicine_server.entity.ChatMessage;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -17,6 +20,7 @@ import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -32,8 +36,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final Map<WebSocketSession, Set<String>> sessionRooms = new ConcurrentHashMap<>();
     private final JwtService jwtService;
 
-    public ChatWebSocketHandler(JwtService jwtService) {
+    @Nullable
+    private final ChatMessageRepository chatMessageRepository;
+
+    public ChatWebSocketHandler(JwtService jwtService, @Nullable ChatMessageRepository chatMessageRepository) {
         this.jwtService = jwtService;
+        this.chatMessageRepository = chatMessageRepository;
     }
 
     @Override
@@ -94,11 +102,40 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             }
             default -> {
                 if (!roomId.isBlank()) {
-                    data.putIfAbsent("senderId", session.getAttributes().get("userId"));
+                    String senderId = String.valueOf(session.getAttributes().getOrDefault("userId", "unknown"));
+                    data.putIfAbsent("senderId", senderId);
                     data.putIfAbsent("serverTimestamp", Instant.now().toString());
+
+                    // DB 저장
+                    saveToDb(roomId, senderId, data);
+
                     broadcastToRoom(roomId, objectMapper.writeValueAsString(data));
                 }
             }
+        }
+    }
+
+    private void saveToDb(String roomId, String senderId, Map<String, Object> data) {
+        if (chatMessageRepository == null) return;
+        try {
+            String senderName = String.valueOf(data.getOrDefault("senderName", senderId));
+            String messageText = String.valueOf(data.getOrDefault("message", ""));
+            String messageType = String.valueOf(data.getOrDefault("messageType", "text"));
+
+            ChatMessage entity = ChatMessage.builder()
+                    .roomId(roomId)
+                    .senderId(senderId)
+                    .senderName(senderName)
+                    .message(messageText)
+                    .messageType(messageType)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+
+            ChatMessage saved = chatMessageRepository.save(entity);
+            // 저장된 ID를 data에 추가해서 브로드캐스트에 포함
+            data.put("dbId", saved.getId());
+        } catch (Exception e) {
+            // DB 저장 실패해도 WebSocket 브로드캐스트는 계속
         }
     }
 

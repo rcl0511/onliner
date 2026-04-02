@@ -1,3 +1,6 @@
+import API_BASE from "../api/baseUrl";
+import authStorage from "./authStorage";
+
 const CHAT_PREFIX = "chat_messages";
 
 class ChatService {
@@ -7,18 +10,32 @@ class ChatService {
     return `${CHAT_PREFIX}_${context}_${participants}`;
   }
 
-  getMessages(chatKey) {
+  async fetchHistory(roomId) {
+    const token = authStorage.getToken();
+    if (!token) return [];
     try {
-      return JSON.parse(localStorage.getItem(chatKey) || "[]");
+      const res = await fetch(`${API_BASE}/api/chat/${encodeURIComponent(roomId)}/messages`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return this._getLocal(roomId);
+      return await res.json();
+    } catch {
+      return this._getLocal(roomId);
+    }
+  }
+
+  // localStorage fallback (render-nodb 모드 또는 네트워크 오류 시)
+  _getLocal(roomId) {
+    try {
+      return JSON.parse(localStorage.getItem(roomId) || "[]");
     } catch {
       return [];
     }
   }
 
-  saveMessage(chatKey, message) {
-    const current = this.getMessages(chatKey);
-    const next = [...current, message];
-    localStorage.setItem(chatKey, JSON.stringify(next));
+  saveLocalMessage(roomId, message) {
+    const current = this._getLocal(roomId);
+    localStorage.setItem(roomId, JSON.stringify([...current, message]));
   }
 }
 

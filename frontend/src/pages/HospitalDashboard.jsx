@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from 'date-fns';
+import authStorage from '../services/authStorage';
+import API_BASE from '../api/baseUrl';
 import '../css/HospitalDashboard.css';
 
 export default function HospitalDashboard() {
@@ -8,34 +10,21 @@ export default function HospitalDashboard() {
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
-    loadDashboardData();
+    const token = authStorage.getToken();
+    fetch(`${API_BASE}/api/dashboard/hospital`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => setStats(data))
+      .catch(() => {
+        setStats({
+          unreadInvoices: 0,
+          pendingPayments: 0,
+          totalUnpaid: 0,
+          recentInvoices: [],
+        });
+      });
   }, []);
-
-  const loadDashboardData = () => {
-    // 대시보드 통계 데이터
-    const mockStats = {
-      unreadInvoices: 3,
-      pendingPayments: 2,
-      totalUnpaid: 3250000,
-      recentInvoices: [
-        {
-          id: 'INV-2024-001',
-          vendorName: 'DH약품',
-          date: '2024-01-15',
-          amount: 1250000,
-          status: 'unread'
-        },
-        {
-          id: 'INV-2024-002',
-          vendorName: '서울제약',
-          date: '2024-01-14',
-          amount: 980000,
-          status: 'unread'
-        }
-      ]
-    };
-    setStats(mockStats);
-  };
 
   if (!stats) {
     return <div className="dashboard-loading">로딩 중...</div>;

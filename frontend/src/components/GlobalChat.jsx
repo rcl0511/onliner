@@ -14,8 +14,9 @@ const GlobalChat = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [currentContext, setCurrentContext] = useState(null);
   const [selectedContactId, setSelectedContactId] = useState('');
-  const messagesEndRef = useRef(null);
   const [readStatus, setReadStatus] = useState(null);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const messagesEndRef = useRef(null);
 
   const user = authStorage.getUser();
   const isHospital = user.role === 'hospital';
@@ -48,26 +49,25 @@ const GlobalChat = () => {
     ];
   }, [isHospital]);
 
-  const chatThreads = useMemo(() => {
-    if (!currentContext) return [];
-    return contacts.map((contact, idx) => {
-      const key = chatService.getChatKey({
-        invoiceId: currentContext?.type === 'invoice' ? currentContext.invoiceId : null,
-        selfId: getSelfId(),
-        otherId: getContactSelfId(contact.id)
-      });
-      const history = chatService.getMessages(key);
-      const last = history[history.length - 1];
-      return {
-        id: contact.id,
-        name: contact.name,
-        subtitle: contact.subtitle,
-        lastMessage: last?.message || "대화를 시작해 보세요",
-        lastTime: last?.timestamp || null,
-        order: last?.timestamp ? new Date(last.timestamp).getTime() : -(idx + 1),
-      };
-    }).sort((a, b) => b.order - a.order);
-  }, [contacts, currentContext, getContactSelfId, getSelfId]);
+  const chatKey = useMemo(() => {
+    if (!selectedContactId || !currentContext) return '';
+    return chatService.getChatKey({
+      invoiceId: currentContext?.type === 'invoice' ? currentContext.invoiceId : null,
+      selfId: getSelfId(),
+      otherId: getContactSelfId(selectedContactId)
+    });
+  }, [selectedContactId, currentContext, getContactSelfId, getSelfId]);
+
+  // 채팅방 전환 또는 열릴 때 히스토리 로드
+  useEffect(() => {
+    if (!chatKey) return;
+    setIsLoadingHistory(true);
+    chatService.fetchHistory(chatKey).then((history) => {
+      setMessages(history);
+      setUnreadCount(0);
+      setIsLoadingHistory(false);
+    });
+  }, [chatKey]);
 
   useEffect(() => {
     if (!selectedContactId && contacts.length > 0) {
@@ -80,37 +80,14 @@ const GlobalChat = () => {
     if (path.includes('/invoice/')) {
       const invoiceId = path.split('/invoice/')[1]?.split('?')[0];
       if (invoiceId) {
-        setCurrentContext({
-          type: 'invoice',
-          invoiceId: invoiceId,
-          title: `명세서 ${invoiceId}`
-        });
+        setCurrentContext({ type: 'invoice', invoiceId, title: `명세서 ${invoiceId}` });
       }
     } else {
-      setCurrentContext({
-        type: 'general',
-        title: isHospital ? '도매업체 문의' : '병원 문의'
-      });
+      setCurrentContext({ type: 'general', title: isHospital ? '도매업체 문의' : '병원 문의' });
     }
   }, [location, isHospital]);
 
-  const chatKey = useMemo(() => {
-    if (!selectedContactId) return '';
-    return chatService.getChatKey({
-      invoiceId: currentContext?.type === 'invoice' ? currentContext.invoiceId : null,
-      selfId: getSelfId(),
-      otherId: getContactSelfId(selectedContactId)
-    });
-  }, [selectedContactId, currentContext, getContactSelfId, getSelfId]);
-
-  useEffect(() => {
-    if (isOpen && chatKey) {
-      const loaded = chatService.getMessages(chatKey);
-      setMessages(loaded);
-      setUnreadCount(0);
-    }
-  }, [isOpen, chatKey]);
-
+  // WebSocket 수신
   useEffect(() => {
     if (!chatKey) return;
     wsChatService.connect();
@@ -126,19 +103,17 @@ const GlobalChat = () => {
         return;
       }
       if (payload?.type && payload.type !== "chat") return;
+
       const incoming = {
-        id: payload.id || payload.clientMessageId || Date.now(),
+        id: payload.dbId || payload.id || payload.clientMessageId || Date.now(),
         sender: payload.sender || "unknown",
         senderName: payload.senderName || "상대방",
         message: payload.message || "",
-        timestamp: payload.timestamp || payload.serverTimestamp || new Date().toISOString(),
-        type: payload.messageType || "text",
-        context: currentContext,
+        timestamp: payload.serverTimestamp || payload.timestamp || new Date().toISOString(),
+        messageType: payload.messageType || "text",
       };
       setMessages((prev) => {
-        if (prev.some((m) => m.id === incoming.id)) {
-          return prev;
-        }
+        if (prev.some((m) => String(m.id) === String(incoming.id))) return prev;
         return [...prev, incoming];
       });
       if (!isOpen) {
@@ -146,30 +121,13 @@ const GlobalChat = () => {
       }
     });
     return () => unsubscribe();
-  }, [chatKey, isOpen, currentContext]);
+  }, [chatKey, isOpen]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  useEffect(() => {
-    if (!chatKey) return;
-    const onStorage = (event) => {
-      if (event.key === chatKey) {
-        const next = chatService.getMessages(chatKey);
-        setMessages(next);
-        if (!isOpen) {
-          setUnreadCount((prev) => prev + 1);
-        }
-      }
-      if (event.key === `chat_typing_${chatKey}`) {
-        setIsTyping(event.newValue === "1");
-      }
-    };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, [chatKey, isOpen]);
-
+  // 타이핑 감지 (같은 탭 내 폴백)
   useEffect(() => {
     if (!chatKey) return;
     const interval = setInterval(() => {
@@ -179,6 +137,7 @@ const GlobalChat = () => {
     return () => clearInterval(interval);
   }, [chatKey]);
 
+  // 읽음 처리
   useEffect(() => {
     if (!isOpen || !chatKey || messages.length === 0) return;
     const lastMessage = messages[messages.length - 1];
@@ -194,23 +153,28 @@ const GlobalChat = () => {
     e.preventDefault();
     if (!newMessage.trim() || !chatKey) return;
 
+    const clientId = `local_${Date.now()}`;
     const message = {
-      id: Date.now(),
+      id: clientId,
       sender: isHospital ? 'hospital' : 'vendor',
       senderName: isHospital ? (user.name || '병원 담당자') : (user.companyName || '도매업체'),
       message: newMessage,
       timestamp: new Date().toISOString(),
-      type: 'text',
-      context: currentContext
+      messageType: 'text',
     };
 
-    chatService.saveMessage(chatKey, message);
+    // 낙관적 UI 업데이트
     setMessages((prev) => [...prev, message]);
     setNewMessage('');
+
+    // localStorage fallback 저장
+    chatService.saveLocalMessage(chatKey, message);
+
+    // WebSocket 전송 (서버에서 DB 저장 후 브로드캐스트)
     wsChatService.send({
       type: "chat",
       roomId: chatKey,
-      id: message.id,
+      id: clientId,
       sender: message.sender,
       senderName: message.senderName,
       message: message.message,
@@ -223,9 +187,7 @@ const GlobalChat = () => {
     setNewMessage(e.target.value);
     if (chatKey) {
       localStorage.setItem(`chat_typing_${chatKey}`, "1");
-      setTimeout(() => {
-        localStorage.setItem(`chat_typing_${chatKey}`, "0");
-      }, 1200);
+      setTimeout(() => localStorage.setItem(`chat_typing_${chatKey}`, "0"), 1200);
     }
   };
 
@@ -233,22 +195,22 @@ const GlobalChat = () => {
     const file = e.target.files[0];
     if (!file || !chatKey) return;
 
+    const clientId = `local_file_${Date.now()}`;
     const fileMessage = {
-      id: Date.now(),
+      id: clientId,
       sender: isHospital ? 'hospital' : 'vendor',
       senderName: isHospital ? (user.name || '병원 담당자') : (user.companyName || '도매업체'),
       message: file.name,
       timestamp: new Date().toISOString(),
-      type: 'file',
-      context: currentContext
+      messageType: 'file',
     };
 
-    chatService.saveMessage(chatKey, fileMessage);
     setMessages((prev) => [...prev, fileMessage]);
+    chatService.saveLocalMessage(chatKey, fileMessage);
     wsChatService.send({
       type: "chat",
       roomId: chatKey,
-      id: fileMessage.id,
+      id: clientId,
       sender: fileMessage.sender,
       senderName: fileMessage.senderName,
       message: fileMessage.message,
@@ -258,17 +220,16 @@ const GlobalChat = () => {
   };
 
   const toggleChat = () => {
-    setIsOpen(!isOpen);
-    if (!isOpen) {
-      setUnreadCount(0);
-    }
+    setIsOpen((prev) => !prev);
+    if (!isOpen) setUnreadCount(0);
   };
 
   const selectedContact = contacts.find((c) => c.id === selectedContactId);
+  const mySender = isHospital ? 'hospital' : 'vendor';
 
   return (
     <>
-      <button 
+      <button
         className={`global-chat-floating-btn ${unreadCount > 0 ? 'has-unread' : ''}`}
         onClick={toggleChat}
         title="문의하기"
@@ -296,40 +257,52 @@ const GlobalChat = () => {
             </div>
 
             <div className="global-chat-body">
+              {/* 연락처 목록 */}
               <div className="global-chat-threadlist">
                 <div className="chat-sidebar-title">대화 목록</div>
                 <div className="chat-thread-list">
-                  {chatThreads.map((thread) => (
+                  {contacts.map((contact) => (
                     <button
-                      key={thread.id}
-                      className={`chat-thread-item ${thread.id === selectedContactId ? "active" : ""}`}
-                      onClick={() => setSelectedContactId(thread.id)}
+                      key={contact.id}
+                      className={`chat-thread-item ${contact.id === selectedContactId ? "active" : ""}`}
+                      onClick={() => setSelectedContactId(contact.id)}
                     >
-                      <div className="chat-thread-name">{thread.name}</div>
-                      <div className="chat-thread-preview">{thread.lastMessage}</div>
+                      <div className="chat-thread-name">{contact.name}</div>
+                      <div className="chat-thread-preview">{contact.subtitle}</div>
                     </button>
                   ))}
                 </div>
               </div>
 
+              {/* 메시지 패널 */}
               <div className="global-chat-panel">
                 <div className="global-chat-messages">
+                  {isLoadingHistory && (
+                    <div style={{ textAlign: 'center', padding: '20px', color: '#94a3b8', fontSize: '13px' }}>
+                      대화 내역 불러오는 중...
+                    </div>
+                  )}
+                  {!isLoadingHistory && messages.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8', fontSize: '13px' }}>
+                      대화를 시작해 보세요
+                    </div>
+                  )}
                   {messages.map((msg) => (
-                    <div 
-                      key={msg.id} 
-                      className={`global-chat-message ${msg.sender === (isHospital ? 'hospital' : 'vendor') ? 'sent' : 'received'}`}
+                    <div
+                      key={msg.id}
+                      className={`global-chat-message ${msg.sender === mySender ? 'sent' : 'received'}`}
                     >
                       <div className="global-message-header">
                         <span className="global-message-sender">{msg.senderName}</span>
                         <span className="global-message-time">
-                          {new Date(msg.timestamp).toLocaleTimeString('ko-KR', { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
+                          {new Date(msg.timestamp).toLocaleTimeString('ko-KR', {
+                            hour: '2-digit',
+                            minute: '2-digit'
                           })}
                         </span>
                       </div>
                       <div className="global-message-content">
-                        {msg.type === 'file' ? (
+                        {msg.messageType === 'file' ? (
                           <div className="global-file-message">
                             <span className="file-icon">첨부</span> {msg.message}
                             <button className="btn-outline btn-small" style={{ marginLeft: '8px' }}>
@@ -340,22 +313,20 @@ const GlobalChat = () => {
                           <p>{msg.message}</p>
                         )}
                       </div>
-                      {readStatus?.lastReadId === msg.id && msg.sender === (isHospital ? 'hospital' : 'vendor') && (
+                      {readStatus?.lastReadId === msg.id && msg.sender === mySender && (
                         <div className="global-message-read">읽음</div>
                       )}
                     </div>
                   ))}
-                  
+
                   {isTyping && (
                     <div className="global-chat-message received">
                       <div className="global-typing-indicator">
-                        <span></span>
-                        <span></span>
-                        <span></span>
+                        <span></span><span></span><span></span>
                       </div>
                     </div>
                   )}
-                  
+
                   <div ref={messagesEndRef} />
                 </div>
 
@@ -363,8 +334,8 @@ const GlobalChat = () => {
                   <div className="global-chat-input-actions">
                     <label className="global-file-upload-btn">
                       <span className="file-icon">첨부</span>
-                      <input 
-                        type="file" 
+                      <input
+                        type="file"
                         onChange={handleFileUpload}
                         style={{ display: 'none' }}
                         accept="image/*,.pdf,.doc,.docx"

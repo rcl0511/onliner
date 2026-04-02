@@ -1,7 +1,15 @@
 package com.onliner.medicine_server.auth;
 
-import org.springframework.beans.factory.annotation.Value;
+import com.onliner.medicine_server.entity.HospitalUser;
+import com.onliner.medicine_server.entity.User;
+import com.onliner.medicine_server.entity.VendorUser;
+import com.onliner.medicine_server.repository.HospitalUserRepository;
+import com.onliner.medicine_server.repository.UserRepository;
+import com.onliner.medicine_server.repository.VendorUserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.lang.Nullable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -9,35 +17,52 @@ import java.util.Map;
 
 @Service
 public class AuthService {
-    private final boolean devBypass;
 
-    public AuthService(@Value("${auth.dev-bypass:false}") boolean devBypass) {
-        this.devBypass = devBypass;
-    }
+    // render-nodb 프로파일에서는 null일 수 있음
+    @Nullable
+    private final UserRepository userRepository;
+    @Nullable
+    private final VendorUserRepository vendorUserRepository;
+    @Nullable
+    private final HospitalUserRepository hospitalUserRepository;
+    @Nullable
+    private final PasswordEncoder passwordEncoder;
 
-    private static final Map<String, HospitalAccount> HOSPITAL_ACCOUNTS = Map.of(
-            "01012345678", new HospitalAccount("temp1234", true, "서울대학교병원", "hospital-snu"),
-            "01087654321", new HospitalAccount("temp1234", false, "서울대학교병원", "hospital-snu")
+    // DB 없는 환경을 위한 폴백 계정 (render-nodb 전용)
+    private static final Map<String, String[]> FALLBACK_HOSPITAL = Map.of(
+            "01012345678", new String[]{"temp1234", "서울대학교병원", "hospital-snu", "병원 담당자"}
     );
-
-    private static final Map<String, Map<String, VendorAccount>> VENDOR_ACCOUNTS = Map.of(
+    private static final Map<String, Map<String, String[]>> FALLBACK_VENDOR = Map.of(
             "dh-pharm", Map.of(
-                    "master@dh-pharm.com", new VendorAccount("1234", "MASTER", "대표 관리자", "DH약품"),
-                    "sales@dh-pharm.com", new VendorAccount("1234", "SALES", "영업 담당", "DH약품"),
-                    "warehouse@dh-pharm.com", new VendorAccount("1234", "WAREHOUSE", "창고 관리자", "DH약품")
-            ),
-            "test-company", Map.of(
-                    "master@test.com", new VendorAccount("1234", "MASTER", "대표 관리자", "테스트업체")
+                    "master@dh-pharm.com", new String[]{"1234", "MASTER", "대표 관리자", "DH약품"},
+                    "sales@dh-pharm.com", new String[]{"1234", "SALES", "영업 담당", "DH약품"},
+                    "warehouse@dh-pharm.com", new String[]{"1234", "WAREHOUSE", "창고 관리자", "DH약품"}
             )
     );
+
+    @Autowired
+    public AuthService(@Nullable UserRepository userRepository,
+                       @Nullable VendorUserRepository vendorUserRepository,
+                       @Nullable HospitalUserRepository hospitalUserRepository,
+                       @Nullable PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.vendorUserRepository = vendorUserRepository;
+        this.hospitalUserRepository = hospitalUserRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
 
     public LoginResponse login(LoginRequest request, JwtService jwtService) {
         if (request == null || request.role() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "role is required");
         }
         String role = request.role().trim().toLowerCase();
-        if (devBypass) {
-            return loginBypass(role, request, jwtService);
+        // DB 사용 불가 시 폴백 로그인
+        if (userRepository == null) {
+            return switch (role) {
+                case "hospital" -> loginHospitalFallback(request, jwtService);
+                case "vendor" -> loginVendorFallback(request, jwtService);
+                default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "invalid role");
+            };
         }
         return switch (role) {
             case "hospital" -> loginHospital(request, jwtService);
@@ -46,103 +71,102 @@ public class AuthService {
         };
     }
 
+    private LoginResponse loginHospitalFallback(LoginRequest request, JwtService jwtService) {
+        if (request.phone() == null || request.password() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "phone/password required");
+        }
+        String[] account = FALLBACK_HOSPITAL.get(request.phone());
+        if (account == null || !account[0].equals(request.password())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "전화번호 또는 비밀번호가 잘못되었습니다.");
+        }
+        UserInfo user = new UserInfo("hospital", account[3], null, null, null, account[1], account[2], request.phone(), null, false);
+        return new LoginResponse(jwtService.generateToken(user), user);
+    }
+
+    private LoginResponse loginVendorFallback(LoginRequest request, JwtService jwtService) {
+        if (request.companyCode() == null || request.email() == null || request.password() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "companyCode/email/password required");
+        }
+        String code = request.companyCode().trim().toLowerCase();
+        Map<String, String[]> companyAccounts = FALLBACK_VENDOR.get(code);
+        if (companyAccounts == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "등록되지 않은 업체 코드입니다.");
+        }
+        String[] account = companyAccounts.get(request.email());
+        if (account == null || !account[0].equals(request.password())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "아이디 또는 비밀번호가 잘못되었습니다.");
+        }
+        UserInfo user = new UserInfo("vendor", account[2], code, account[3], account[1], null, null, null, request.email(), false);
+        return new LoginResponse(jwtService.generateToken(user), user);
+    }
+
     private LoginResponse loginHospital(LoginRequest request, JwtService jwtService) {
         if (request.phone() == null || request.password() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "phone/password required");
         }
-        HospitalAccount account = HOSPITAL_ACCOUNTS.get(request.phone());
-        if (account == null || !account.password().equals(request.password())) {
+
+        User user = userRepository.findByIdentifier(request.phone())
+                .filter(u -> "hospital".equals(u.getRole()) && u.isActive())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "전화번호 또는 비밀번호가 잘못되었습니다."));
+
+        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "전화번호 또는 비밀번호가 잘못되었습니다.");
         }
-        UserInfo user = new UserInfo(
+
+        HospitalUser hospitalUser = hospitalUserRepository.findByUser(user)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "병원 정보를 찾을 수 없습니다."));
+
+        UserInfo userInfo = new UserInfo(
                 "hospital",
-                "병원 담당자",
+                user.getName(),
                 null,
                 null,
                 null,
-                account.hospitalName(),
-                account.hospitalId(),
+                hospitalUser.getHospitalName(),
+                hospitalUser.getHospitalId(),
                 request.phone(),
                 null,
-                account.requiresPasswordChange()
+                user.isRequiresPasswordChange()
         );
-        String token = jwtService.generateToken(user);
-        return new LoginResponse(token, user);
+        String token = jwtService.generateToken(userInfo);
+        return new LoginResponse(token, userInfo);
     }
 
     private LoginResponse loginVendor(LoginRequest request, JwtService jwtService) {
         if (request.companyCode() == null || request.email() == null || request.password() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "companyCode/email/password required");
         }
-        String code = request.companyCode().trim().toLowerCase();
-        Map<String, VendorAccount> companyAccounts = VENDOR_ACCOUNTS.get(code);
-        if (companyAccounts == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "등록되지 않은 업체 코드입니다.");
-        }
-        VendorAccount account = companyAccounts.get(request.email());
-        if (account == null || !account.password().equals(request.password())) {
+
+        String email = request.email().trim();
+        User user = userRepository.findByIdentifier(email)
+                .filter(u -> "vendor".equals(u.getRole()) && u.isActive())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "아이디 또는 비밀번호가 잘못되었습니다."));
+
+        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "아이디 또는 비밀번호가 잘못되었습니다.");
         }
-        UserInfo user = new UserInfo(
+
+        VendorUser vendorUser = vendorUserRepository.findByUser(user)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "업체 정보를 찾을 수 없습니다."));
+
+        String code = request.companyCode().trim().toLowerCase();
+        if (!code.equals(vendorUser.getCompanyCode())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "등록되지 않은 업체 코드입니다.");
+        }
+
+        UserInfo userInfo = new UserInfo(
                 "vendor",
-                account.name(),
-                code,
-                account.companyName(),
-                account.permission(),
+                user.getName(),
+                vendorUser.getCompanyCode(),
+                vendorUser.getCompanyName(),
+                vendorUser.getPermission(),
                 null,
                 null,
                 null,
-                request.email(),
+                email,
                 false
         );
-        String token = jwtService.generateToken(user);
-        return new LoginResponse(token, user);
-    }
-
-    private LoginResponse loginBypass(String role, LoginRequest request, JwtService jwtService) {
-        return switch (role) {
-            case "hospital" -> {
-                String phone = request.phone() == null ? "00000000000" : request.phone();
-                UserInfo user = new UserInfo(
-                        "hospital",
-                        "병원 담당자",
-                        null,
-                        null,
-                        null,
-                        "테스트병원",
-                        "hospital-dev",
-                        phone,
-                        null,
-                        false
-                );
-                String token = jwtService.generateToken(user);
-                yield new LoginResponse(token, user);
-            }
-            case "vendor" -> {
-                String companyCode = request.companyCode() == null ? "dh-pharm" : request.companyCode().trim().toLowerCase();
-                String email = request.email() == null ? "dev@local" : request.email();
-                UserInfo user = new UserInfo(
-                        "vendor",
-                        "도매 담당자",
-                        companyCode,
-                        "테스트업체",
-                        "MASTER",
-                        null,
-                        null,
-                        null,
-                        email,
-                        false
-                );
-                String token = jwtService.generateToken(user);
-                yield new LoginResponse(token, user);
-            }
-            default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "invalid role");
-        };
-    }
-
-    private record HospitalAccount(String password, boolean requiresPasswordChange, String hospitalName, String hospitalId) {
-    }
-
-    private record VendorAccount(String password, String permission, String name, String companyName) {
+        String token = jwtService.generateToken(userInfo);
+        return new LoginResponse(token, userInfo);
     }
 }

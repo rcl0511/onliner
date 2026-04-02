@@ -1,38 +1,48 @@
 import React, { useState, useEffect } from "react";
+import authStorage from '../services/authStorage';
+import API_BASE from '../api/baseUrl';
 import '../css/common.css';
 
+const PERMISSION_LABELS = {
+  MASTER: '마스터 관리자',
+  SALES: '영업사원',
+  WAREHOUSE: '창고 관리자',
+};
+
+const PERMISSION_STYLE = {
+  MASTER: { background: '#EEF2FF', color: '#475BE8' },
+  SALES: { background: '#EFF6FF', color: '#3B82F6' },
+  WAREHOUSE: { background: '#F0FDF4', color: '#10B981' },
+};
+
 export default function Permissions() {
-  const user = JSON.parse(localStorage.getItem('userInfo')) || {};
+  const user = authStorage.getUser();
   const isMaster = user.permission === 'MASTER';
+  const token = authStorage.getToken();
 
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newUser, setNewUser] = useState({
-    email: '',
-    name: '',
-    permission: 'SALES',
-    password: ''
-  });
+  const [newUser, setNewUser] = useState({ email: '', name: '', permission: 'SALES', password: '' });
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (isMaster) {
-      loadUsers();
-    }
+    if (isMaster) loadUsers();
   }, [isMaster]);
 
   const loadUsers = async () => {
     setLoading(true);
+    setError('');
     try {
-      const mockUsers = [
-        { id: 1, email: 'master@dh-pharm.com', name: '대표 관리자', permission: 'MASTER', createdAt: '2024-01-15' },
-        { id: 2, email: 'sales1@dh-pharm.com', name: '김영업', permission: 'SALES', createdAt: '2024-03-20' },
-        { id: 3, email: 'warehouse@dh-pharm.com', name: '이창고', permission: 'WAREHOUSE', createdAt: '2024-02-10' },
-        { id: 4, email: 'sales2@dh-pharm.com', name: '박영업', permission: 'SALES', createdAt: '2024-04-05' },
-      ];
-      setUsers(mockUsers);
-    } catch (error) {
-      alert('사용자 목록 조회 실패: ' + error.message);
+      const res = await fetch(`${API_BASE}/api/users`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setUsers(data);
+    } catch (err) {
+      setError('사용자 목록을 불러오지 못했습니다: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -40,29 +50,43 @@ export default function Permissions() {
 
   const handleAddUser = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
-      const newId = users.length + 1;
-      setUsers([...users, { ...newUser, id: newId, createdAt: new Date().toISOString().slice(0, 10) }]);
-      alert('사용자가 추가되었습니다.');
+      const res = await fetch(`${API_BASE}/api/users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(newUser),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await loadUsers();
       setShowAddModal(false);
       setNewUser({ email: '', name: '', permission: 'SALES', password: '' });
-    } catch (error) {
-      alert('사용자 추가 실패: ' + error.message);
+    } catch (err) {
+      alert('사용자 추가 실패: ' + err.message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleDeleteUser = async (userId) => {
-    if (!window.confirm('정말 삭제하시겠습니까?')) return;
-    setUsers(users.filter(u => u.id !== userId));
-    alert('사용자가 삭제되었습니다.');
-  };
-
-  const getPermissionText = (permission) => {
-    switch (permission) {
-      case 'MASTER': return '마스터 관리자';
-      case 'SALES': return '영업사원';
-      case 'WAREHOUSE': return '창고 관리자';
-      default: return permission;
+  const handleToggleActive = async (userId, currentActive) => {
+    const action = currentActive ? '비활성화' : '활성화';
+    if (!window.confirm(`이 계정을 ${action}하시겠습니까?`)) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/users/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ active: String(!currentActive) }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await loadUsers();
+    } catch (err) {
+      alert(`${action} 실패: ` + err.message);
     }
   };
 
@@ -85,9 +109,15 @@ export default function Permissions() {
           <p style={{ margin: 0, color: '#64748B', fontSize: '14px' }}>사용자 권한을 관리하고 새로운 사용자를 추가할 수 있습니다.</p>
         </div>
         <button className="btn-primary" onClick={() => setShowAddModal(true)}>
-          사용자 추가
+          + 사용자 추가
         </button>
       </div>
+
+      {error && (
+        <div style={{ background: '#FEF2F2', color: '#EF4444', padding: '12px 16px', borderRadius: 8, marginBottom: 16, fontSize: 14 }}>
+          {error}
+        </div>
+      )}
 
       {loading ? (
         <div className="card" style={{ textAlign: 'center', padding: '60px' }}>
@@ -101,7 +131,7 @@ export default function Permissions() {
                 <th>이메일</th>
                 <th>이름</th>
                 <th>권한</th>
-                <th>등록일</th>
+                <th>상태</th>
                 <th style={{ textAlign: 'center' }}>관리</th>
               </tr>
             </thead>
@@ -114,30 +144,45 @@ export default function Permissions() {
                 </tr>
               ) : (
                 users.map((u) => (
-                  <tr key={u.id}>
-                    <td style={{ fontWeight: 600, color: '#1E293B' }}>{u.email}</td>
+                  <tr key={u.id} style={{ opacity: u.active ? 1 : 0.5 }}>
+                    <td style={{ fontWeight: 600, color: '#1E293B' }}>{u.identifier}</td>
                     <td>{u.name}</td>
                     <td>
                       <span style={{
-                        padding: '6px 12px',
+                        padding: '4px 10px',
                         borderRadius: '8px',
                         fontSize: '12px',
                         fontWeight: 700,
-                        background: u.permission === 'MASTER' ? '#EEF2FF' : u.permission === 'SALES' ? '#EFF6FF' : '#F0FDF4',
-                        color: u.permission === 'MASTER' ? '#475BE8' : u.permission === 'SALES' ? '#3B82F6' : '#10B981'
+                        ...(PERMISSION_STYLE[u.permission] || { background: '#F1F5F9', color: '#64748B' })
                       }}>
-                        {getPermissionText(u.permission)}
+                        {PERMISSION_LABELS[u.permission] || u.permission}
                       </span>
                     </td>
-                    <td style={{ color: '#64748B' }}>{u.createdAt}</td>
+                    <td>
+                      <span style={{
+                        padding: '4px 10px',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        background: u.active ? '#F0FDF4' : '#F1F5F9',
+                        color: u.active ? '#10B981' : '#94A3B8',
+                      }}>
+                        {u.active ? '활성' : '비활성'}
+                      </span>
+                    </td>
                     <td style={{ textAlign: 'center' }}>
                       {u.permission !== 'MASTER' && (
                         <button
                           className="btn-outline"
-                          onClick={() => handleDeleteUser(u.id)}
-                          style={{ fontSize: '12px', padding: '6px 12px', color: '#EF4444', borderColor: '#EF4444' }}
+                          onClick={() => handleToggleActive(u.id, u.active)}
+                          style={{
+                            fontSize: '12px',
+                            padding: '5px 12px',
+                            color: u.active ? '#EF4444' : '#10B981',
+                            borderColor: u.active ? '#EF4444' : '#10B981',
+                          }}
                         >
-                          삭제
+                          {u.active ? '비활성화' : '활성화'}
                         </button>
                       )}
                     </td>
@@ -151,39 +196,35 @@ export default function Permissions() {
 
       {showAddModal && (
         <div className="modal-backdrop" onClick={() => setShowAddModal(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
-            <h3 style={{ marginTop: 0, marginBottom: '24px', fontSize: '20px', fontWeight: 700, color: '#1E293B' }}>사용자 추가</h3>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '24px', fontSize: '20px', fontWeight: 700, color: '#1E293B' }}>
+              사용자 추가
+            </h3>
             <form onSubmit={handleAddUser}>
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, fontSize: '14px', color: '#475BE8' }}>
-                  이메일
-                </label>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600, fontSize: '13px', color: '#475BE8' }}>이메일</label>
                 <input
                   type="email"
                   required
                   value={newUser.email}
                   onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                   className="input-field"
+                  placeholder="user@dh-pharm.com"
                 />
               </div>
-
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, fontSize: '14px', color: '#475BE8' }}>
-                  이름
-                </label>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600, fontSize: '13px', color: '#475BE8' }}>이름</label>
                 <input
                   type="text"
                   required
                   value={newUser.name}
                   onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
                   className="input-field"
+                  placeholder="홍길동"
                 />
               </div>
-
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, fontSize: '14px', color: '#475BE8' }}>
-                  권한
-                </label>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600, fontSize: '13px', color: '#475BE8' }}>권한</label>
                 <select
                   value={newUser.permission}
                   onChange={(e) => setNewUser({ ...newUser, permission: e.target.value })}
@@ -193,26 +234,26 @@ export default function Permissions() {
                   <option value="WAREHOUSE">창고 관리자</option>
                 </select>
               </div>
-
               <div style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, fontSize: '14px', color: '#475BE8' }}>
-                  비밀번호
+                <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600, fontSize: '13px', color: '#475BE8' }}>
+                  초기 비밀번호 <span style={{ color: '#94A3B8', fontWeight: 400 }}>(최초 로그인 시 변경 필요)</span>
                 </label>
                 <input
                   type="password"
                   required
+                  minLength={6}
                   value={newUser.password}
                   onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
                   className="input-field"
+                  placeholder="6자 이상"
                 />
               </div>
-
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                 <button type="button" className="btn-secondary" onClick={() => setShowAddModal(false)}>
                   취소
                 </button>
-                <button type="submit" className="btn-primary">
-                  추가
+                <button type="submit" className="btn-primary" disabled={submitting}>
+                  {submitting ? '추가 중...' : '추가'}
                 </button>
               </div>
             </form>

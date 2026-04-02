@@ -88,7 +88,6 @@ const MainLayout = () => {
   const vendorMenu = getVendorMenu();
 
   const footerLinks = [
-    { text: "공지사항", path: "/community" },
     { text: "권한설정", path: "/settings/permissions" },
     { text: "설정관리", path: "/settings/general" },
   ];

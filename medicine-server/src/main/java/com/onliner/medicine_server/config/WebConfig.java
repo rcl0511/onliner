@@ -32,15 +32,24 @@ public class WebConfig implements WebMvcConfigurer {
                 .allowCredentials(true);
     }
 
+    @Value("${file.upload.dir:./uploads}")
+    private String uploadDir;
+
+    @Value("${file.export.dir:./exports}")
+    private String exportDir;
+
     // 🔹 정적 리소스 핸들링: /uploads/** 와 /exports/** 경로 파일 제공
     @Override
     public void addResourceHandlers(@NonNull ResourceHandlerRegistry registry) {
-        // ① 업로드 폴더 매핑 (예: 파일 업로드 등)
-        registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:///C:/Users/USER/Desktop/react/onliner/medicine-server/uploads/");
+        String uploadPath = uploadDir.endsWith("/") ? uploadDir : uploadDir + "/";
+        String exportPath = exportDir.endsWith("/") ? exportDir : exportDir + "/";
 
-        // ② PDF 내보내기 폴더 매핑 (프론트에서 다운로드용 링크로 사용)
-       registry.addResourceHandler("/exports/**")
-        .addResourceLocations("file:///C:/Users/USER/Desktop/react/onliner/medicine-server/exports/");
+        // ① 업로드 폴더 매핑
+        registry.addResourceHandler("/uploads/**")
+                .addResourceLocations("file:" + uploadPath);
+
+        // ② PDF 내보내기 폴더 매핑
+        registry.addResourceHandler("/exports/**")
+                .addResourceLocations("file:" + exportPath);
     }
 }

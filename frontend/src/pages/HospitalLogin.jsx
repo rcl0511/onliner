@@ -7,7 +7,6 @@ import API_BASE from "../api/baseUrl";
 const HospitalLogin = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  // 테스트용 기본 계정 (로그인 편의용)
   const [phone, setPhone] = useState('01012345678');
   const [password, setPassword] = useState('temp1234');
   const [error, setError] = useState('');

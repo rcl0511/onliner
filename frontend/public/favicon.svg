@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="8" fill="#475BE8"/>
+  <!-- 알약 모양: 가로로 긴 캡슐 -->
+  <rect x="4" y="11" width="24" height="10" rx="5" fill="white"/>
+  <!-- 가운데 분리선 -->
+  <line x1="16" y1="11" x2="16" y2="21" stroke="#475BE8" stroke-width="1.5"/>
+  <!-- 왼쪽 절반 색 채우기 -->
+  <path d="M4 16 Q4 11 9 11 L16 11 L16 21 L9 21 Q4 21 4 16 Z" fill="#7C8FF0"/>
+</svg>

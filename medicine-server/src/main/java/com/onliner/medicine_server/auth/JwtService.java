@@ -20,11 +20,14 @@ public class JwtService {
     private final long expirationMillis;
 
     public JwtService(
-            @Value("${jwt.secret:change-me-please-change-me-please-change-me}") String secret,
+            @Value("${jwt.secret}") String secret,
             @Value("${jwt.expiration-minutes:480}") long expirationMinutes
     ) {
         byte[] raw = secret.getBytes(StandardCharsets.UTF_8);
-        this.key = Keys.hmacShaKeyFor(raw.length < 32 ? (secret + "0123456789abcdef0123456789abcdef").getBytes(StandardCharsets.UTF_8) : raw);
+        if (raw.length < 32) {
+            throw new IllegalArgumentException("JWT_SECRET must be at least 32 characters");
+        }
+        this.key = Keys.hmacShaKeyFor(raw);
         this.expirationMillis = expirationMinutes * 60 * 1000;
     }
 

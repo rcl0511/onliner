@@ -6,7 +6,6 @@ import authStorage from "../services/authStorage";
 import API_BASE from "../api/baseUrl";
 const VendorLogin = () => {
   const navigate = useNavigate();
-  // 테스트용 기본 계정 (로그인 편의용 - 서버 등록 계정)
   const [companyCode, setCompanyCode] = useState('dh-pharm');
   const [email, setEmail] = useState('master@dh-pharm.com');
   const [password, setPassword] = useState('1234');

@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import authStorage from '../services/authStorage';
+import API_BASE from '../api/baseUrl';
 import '../css/VendorDashboard.css';
 import '../css/common.css';
 
@@ -12,16 +14,21 @@ const VendorDashboard = () => {
     const [unconfirmedInvoices, setUnconfirmedInvoices] = useState(0);
 
     useEffect(() => {
-        fetch('/vendor_orders.json').then(res => res.json()).then(setOrders).catch(() => setOrders([]));
-        setDeliveryStats({ pending: 5, inProgress: 12, completed: 45 });
-        setLowStockItems([
-            { code: 'A001', name: '타이레놀500mg', stock: 15, threshold: 50 },
-            { code: 'A002', name: '아스피린', stock: 23, threshold: 50 },
-            { code: 'A003', name: '게보린', stock: 8, threshold: 30 },
-        ]);
-        setUnconfirmedInvoices(8);
-        // 오늘 매출 임시 지정
-        setTodaySales({ totalSales: 12500000 });
+        const token = authStorage.getToken();
+        fetch(`${API_BASE}/api/dashboard/vendor`, {
+            headers: { Authorization: `Bearer ${token}` },
+        })
+            .then((res) => (res.ok ? res.json() : Promise.reject()))
+            .then((data) => {
+                setTodaySales(data.todaySales || {});
+                setDeliveryStats(data.deliveryStats || {});
+                setLowStockItems(data.lowStockItems || []);
+                setUnconfirmedInvoices(data.unconfirmedInvoices || 0);
+            })
+            .catch(() => {
+                setDeliveryStats({ pending: 0, inProgress: 0, completed: 0 });
+                setTodaySales({ totalSales: 0, changeRate: 0 });
+            });
     }, []);
 
     const getStatusColor = (status) => {
@@ -37,7 +44,7 @@ const VendorDashboard = () => {
         <div className="vendor-dashboard-layout" style={{ background: 'white', padding: '32px', minHeight: 'calc(100vh - 48px)' }}>
             <div className="vendor-dashboard-widgets" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '32px' }}>
                 {[
-                    { label: '오늘 매출', value: todaySales?.totalSales?.toLocaleString() + '원', change: '+12.5%', icon: '💰' },
+                    { label: '오늘 매출', value: (todaySales?.totalSales ?? 0).toLocaleString() + '원', change: (todaySales?.changeRate >= 0 ? '+' : '') + (todaySales?.changeRate ?? 0) + '%', icon: '💰' },
                     { label: '배송 대기', value: (deliveryStats.pending + deliveryStats.inProgress) + '건', detail: `대기 ${deliveryStats.pending} / 진행 ${deliveryStats.inProgress}`, icon: '🚚' },
                     { label: '재고 부족', value: lowStockItems.length + '개', detail: '임계치 이하 품목', icon: '📦' },
                     { label: '미확인 명세서', value: unconfirmedInvoices + '건', detail: '확인 필요', icon: '📄' }

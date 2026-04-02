@@ -2,6 +2,7 @@
 package com.onliner.medicine_server.controller;
 
 import com.onliner.medicine_server.util.PdfUtil;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -21,10 +22,30 @@ import java.util.*;
 @RequestMapping("/api/invoices")
 public class InvoiceController {
 
+    @Value("${file.export.dir:./exports}")
+    private String exportDirStr;
+
+    @Value("${file.template.dir:src/main/resources/templates}")
+    private String templateDir;
+
+    @Value("${spring.servlet.multipart.location:./uploads}")
+    private String uploadDirStr;
+
+    private Path exportsPath;
+    private Path uploadPath;
+
+    @PostConstruct
+    public void init() throws IOException {
+        exportsPath = Paths.get(exportDirStr).toAbsolutePath();
+        uploadPath = Paths.get(uploadDirStr).toAbsolutePath();
+        Files.createDirectories(exportsPath);
+        Files.createDirectories(uploadPath);
+    }
+
     @GetMapping("/exports/{filename:.+}")
     public ResponseEntity<Resource> downloadPdf(@PathVariable String filename) {
         try {
-            Path filePath = Paths.get("C:/Users/USER/Desktop/react/onliner/medicine-server/exports").resolve(filename);
+            Path filePath = exportsPath.resolve(filename);
             Resource resource = new UrlResource(filePath.toUri());
 
             if (!resource.exists()) {
@@ -41,11 +62,6 @@ public class InvoiceController {
         }
     }
 
-    @Value("${spring.servlet.multipart.location}")
-    private String uploadDir;
-
-    private final Path exportsPath = Paths.get("C:/Users/USER/Desktop/react/onliner/medicine-server/exports");
-
     @PostMapping("/upload")
     public ResponseEntity<?> uploadSingle(@RequestPart("invoice") MultipartFile file) {
         if (file.isEmpty()) {
@@ -54,12 +70,8 @@ public class InvoiceController {
 
         try {
             String originalName = Objects.requireNonNull(file.getOriginalFilename());
-            Path tempDir = Paths.get(uploadDir);
-            if (Files.notExists(tempDir)) {
-                Files.createDirectories(tempDir);
-            }
             String tempFilename = UUID.randomUUID() + "_" + originalName;
-            Path tempFilePath = tempDir.resolve(tempFilename);
+            Path tempFilePath = uploadPath.resolve(tempFilename);
             Files.copy(file.getInputStream(), tempFilePath, StandardCopyOption.REPLACE_EXISTING);
 
             String parsedText = PdfUtil.parseAndDedupeText(tempFilePath.toFile());
@@ -67,23 +79,18 @@ public class InvoiceController {
             String orderDate = PdfUtil.extractOrderDate(parsedText);
 
             String safeHosp = hospitalName.replaceAll("[^가-힣a-zA-Z0-9_-]", "");
-            String safeDate = orderDate;
-            String finalFilename = safeHosp + "_" + safeDate + ".pdf";
-
-            if (Files.notExists(exportsPath)) {
-                Files.createDirectories(exportsPath);
-            }
+            String finalFilename = safeHosp + "_" + orderDate + ".pdf";
             Path finalPdfPath = exportsPath.resolve(finalFilename);
 
-            String templateAbsolutePath = Paths.get("src/main/resources/templates/거래명세서_양식.pdf").toString();
+            String templateAbsolutePath = Paths.get(templateDir).toAbsolutePath()
+                    .resolve("거래명세서_양식.pdf").toString();
             PdfUtil.overlayTemplate(templateAbsolutePath, tempFilePath.toString(), finalPdfPath.toString());
 
             Files.deleteIfExists(tempFilePath);
 
-            String pdfUrl = "/exports/" + finalFilename;
             Map<String, Object> body = new HashMap<>();
             body.put("message", "성공");
-            body.put("pdfUrl", pdfUrl);
+            body.put("pdfUrl", "/exports/" + finalFilename);
             body.put("parsedText", parsedText);
 
             return ResponseEntity.ok(body);
@@ -107,12 +114,8 @@ public class InvoiceController {
             if (file.isEmpty()) continue;
             try {
                 String originalName = Objects.requireNonNull(file.getOriginalFilename());
-                Path tempDir = Paths.get(uploadDir);
-                if (Files.notExists(tempDir)) {
-                    Files.createDirectories(tempDir);
-                }
                 String tempFilename = UUID.randomUUID() + "_" + originalName;
-                Path tempFilePath = tempDir.resolve(tempFilename);
+                Path tempFilePath = uploadPath.resolve(tempFilename);
                 Files.copy(file.getInputStream(), tempFilePath, StandardCopyOption.REPLACE_EXISTING);
 
                 String parsedText = PdfUtil.parseAndDedupeText(tempFilePath.toFile());
@@ -120,15 +123,11 @@ public class InvoiceController {
                 String orderDate = PdfUtil.extractOrderDate(parsedText);
 
                 String safeHosp = hospitalName.replaceAll("[^가-힣a-zA-Z0-9_-]", "");
-                String safeDate = orderDate;
-                String finalFilename = safeHosp + "_" + safeDate + "_" + System.currentTimeMillis() + ".pdf";
-
-                if (Files.notExists(exportsPath)) {
-                    Files.createDirectories(exportsPath);
-                }
+                String finalFilename = safeHosp + "_" + orderDate + "_" + System.currentTimeMillis() + ".pdf";
                 Path finalPdfPath = exportsPath.resolve(finalFilename);
 
-                String templateAbsolutePath = Paths.get("src/main/resources/templates/거래명세서_양식.pdf").toString();
+                String templateAbsolutePath = Paths.get(templateDir).toAbsolutePath()
+                        .resolve("거래명세서_양식.pdf").toString();
                 PdfUtil.overlayTemplate(templateAbsolutePath, tempFilePath.toString(), finalPdfPath.toString());
 
                 Files.deleteIfExists(tempFilePath);
@@ -137,7 +136,7 @@ public class InvoiceController {
                 singleResult.put("originalName", originalName);
                 singleResult.put("pdfUrl", "/exports/" + finalFilename);
                 singleResult.put("parsedText", parsedText);
-                singleResult.put("pdfFileName", finalFilename); // ✅ 추가
+                singleResult.put("pdfFileName", finalFilename);
                 results.add(singleResult);
 
             } catch (IOException ex) {

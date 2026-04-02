@@ -28,6 +28,7 @@ import HospitalMyPage from "./pages/HospitalMyPage";
 import VendorInvoiceSave from "./pages/VendorInvoiceSave";
 import VendorAlarms from "./pages/VendorAlarms";
 import Community from "./pages/Community";
+import PaymentSuccess from "./pages/PaymentSuccess";
 import Permissions from "./pages/Permissions";
 import SettingsGeneral from "./pages/SettingsGeneral";
 
@@ -44,17 +45,8 @@ function RootRedirect() {
     }
   }
 
-  // 로그인되지 않았으면 자동으로 테스트 계정으로 로그인 처리
-  const autoLoginUser = {
-    email: 'master@dh-pharm.com',
-    role: 'vendor',
-    companyCode: 'dh-pharm',
-    permission: 'MASTER',
-    name: '대표 관리자',
-    companyName: 'DH약품'
-  };
-  authStorage.setUser(autoLoginUser);
-  return <Navigate to="/vendor/dashboard" replace />;
+  // 로그인되지 않았으면 로그인 페이지로
+  return <Navigate to="/vendor/login" replace />;
 }
 
 function App() {
@@ -67,6 +59,10 @@ function App() {
         {/* 로그인(레이아웃 없음) */}
         <Route path="/hospital/login" element={<HospitalLogin />} />
         <Route path="/vendor/login" element={<VendorLogin />} />
+
+        {/* 결제 콜백 (레이아웃 없음) */}
+        <Route path="/hospital/payment/success" element={<PaymentSuccess />} />
+        <Route path="/hospital/payment/fail" element={<Navigate to="/hospital/payment" replace />} />
 
         {/* ===== 병원 영역 ===== */}
         <Route element={<RequireAuth role="hospital" />}>
