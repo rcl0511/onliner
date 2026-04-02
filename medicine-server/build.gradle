@@ -51,11 +51,14 @@ dependencies {
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
 	// ───────────────────────────────────────────────────────────────────
-	// MariaDB 드라이버
+	// MariaDB 드라이버 (로컬 개발용)
 	// ───────────────────────────────────────────────────────────────────
 	runtimeOnly 'org.mariadb.jdbc:mariadb-java-client:2.7.4'
-	// 만약 MySQL 커넥터를 사용하고 싶다면 아래 줄을 활성화하세요.
-	// runtimeOnly 'mysql:mysql-connector-java:8.0.31'
+
+	// ───────────────────────────────────────────────────────────────────
+	// PostgreSQL 드라이버 (Render 배포용)
+	// ───────────────────────────────────────────────────────────────────
+	runtimeOnly 'org.postgresql:postgresql'
 
 	// ───────────────────────────────────────────────────────────────────
 	// JavaMailSender (이메일 전송)

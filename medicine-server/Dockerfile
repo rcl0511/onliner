@@ -13,4 +13,4 @@ COPY --from=build /app/build/libs/*.jar app.jar
 ENV PORT=10000
 EXPOSE 10000
 
-CMD ["sh", "-c", "java -Dserver.port=${PORT} -jar app.jar --spring.profiles.active=render-nodb"]
+CMD ["sh", "-c", "java -Dserver.port=${PORT} -jar app.jar --spring.profiles.active=render"]
