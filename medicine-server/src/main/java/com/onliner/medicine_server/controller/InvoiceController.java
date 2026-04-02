@@ -40,7 +40,7 @@ public class InvoiceController {
             String originalName = Objects.requireNonNull(file.getOriginalFilename());
 
             // 임시 파일로 저장 후 파싱
-            File tempFile = File.createTempFile("invoice_", ".pdf");
+            File tempFile = Objects.requireNonNull(File.createTempFile("invoice_", ".pdf"));
             Files.copy(file.getInputStream(), tempFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
 
             String parsedText = PdfUtil.parseAndDedupeText(tempFile);
@@ -93,7 +93,7 @@ public class InvoiceController {
             try {
                 String originalName = Objects.requireNonNull(file.getOriginalFilename());
 
-                File tempFile = File.createTempFile("invoice_", ".pdf");
+                File tempFile = Objects.requireNonNull(File.createTempFile("invoice_", ".pdf"));
                 Files.copy(file.getInputStream(), tempFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
 
                 String parsedText = PdfUtil.parseAndDedupeText(tempFile);

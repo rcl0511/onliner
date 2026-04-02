@@ -10,10 +10,10 @@ import org.springframework.web.client.RestTemplate;
 @Service
 public class SupabaseStorageService {
 
-    @Value("${supabase.url}")
+    @Value("${supabase.url:}")
     private String supabaseUrl;
 
-    @Value("${supabase.service-role-key}")
+    @Value("${supabase.service-role-key:}")
     private String serviceRoleKey;
 
     @Value("${supabase.storage.bucket:invoices}")
