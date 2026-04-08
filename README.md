@@ -1,8 +1,8 @@
 # Onliner
 
-의약품 도매업체와 병원 간 주문, 명세서, 배송, 정산 흐름을 관리하는 웹 서비스입니다. 현재 저장소는 React 프론트엔드와 Spring Boot 백엔드가 분리된 모노레포 구조입니다.
+의약품 도매업체와 병원 간 주문, 명세서, 배송, 정산 흐름을 관리하는 웹 서비스입니다.
 
-기획 배경과 서비스 의도는 [기획.md](/Users/lynn/Desktop/dev/onliner/기획.md)에서 확인할 수 있습니다.
+기획 배경과 서비스 의도는 [기획.md](https://github.com/rcl0511/onliner/blob/main/%EA%B8%B0%ED%9A%8D.md)에서 확인할 수 있습니다.
 
 ## 현재 구현 범위
 
