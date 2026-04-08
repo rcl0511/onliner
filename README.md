@@ -35,31 +35,9 @@
 - 프론트 배포: Netlify 기준
 - 백엔드 배포: Render 기준
 
+
+
 ## 기술 스택
-
-### Frontend
-
-- React 19
-- React Router DOM 7
-- Axios
-- date-fns
-- react-icons
-- Create React App 기반 빌드(`react-scripts`)
-
-### Backend
-
-- Spring Boot 3.5
-- Java 21
-- Spring Web
-- Spring Data JPA
-- Spring Security
-- WebSocket
-- JWT(`jjwt`)
-- Apache POI
-- Apache PDFBox
-- Java Mail Sender
-
-## 기술 스택을 사용한 이유
 
 ### Frontend
 
@@ -105,37 +83,8 @@
 └── README.md
 ```
 
-## 주요 경로
 
-### 프론트엔드 라우트
 
-- `/vendor/login`
-- `/vendor/dashboard`
-- `/vendor/orders`
-- `/vendor/stocks`
-- `/vendor/delivery`
-- `/vendor/invoice`
-- `/vendor/clients`
-- `/vendor/trade`
-- `/hospital/login`
-- `/hospital/inbox`
-- `/hospital/order`
-- `/hospital/payment`
-- `/hospital/logs`
-- `/hospital/mypage`
-
-### 백엔드 API
-
-- `/api/auth`
-- `/api/orders`
-- `/api/medicines`
-- `/api/invoices`
-- `/api/invoice-records`
-- `/api/vendors`
-- `/api/payments`
-- `/api/chat`
-- `/healthz`
-- `/ws`
 
 ## 유저 플로우
 
@@ -184,15 +133,8 @@
 
 
 
-```
 
-## 시작하기
 
-### 1. 프론트엔드 실행
-
-```bash
-cd frontend
-npm install
 
 ### 백엔드
 
@@ -212,35 +154,6 @@ Render 프로필에서 추가로 사용하는 값:
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `PORT`
-
-## 실행 프로필
-
-- 기본 실행: PostgreSQL + JPA 사용
-- `render`: PostgreSQL + Supabase Storage 사용
-- `render-nodb`: DB 자동 설정 없이 폴백 계정으로 최소 기능 실행
-
-예시:
-
-```bash
-cd medicine-server
-./gradlew bootRun --args='--spring.profiles.active=render'
-```
-
-## 기본 테스트 계정
-
-`DataInitializer` 또는 폴백 로그인 기준 기본 계정이 포함되어 있습니다.
-
-### Vendor
-
-- 업체 코드: `dh-pharm`
-- `master@dh-pharm.com / 1234`
-- `sales@dh-pharm.com / 1234`
-- `warehouse@dh-pharm.com / 1234`
-
-### Hospital
-
-- `01012345678 / temp1234`
-
 
 
 
