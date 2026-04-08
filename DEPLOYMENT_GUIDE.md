@@ -53,7 +53,9 @@ Spring Boot 애플리케이션을 호스팅할 수 있는 옵션들:
 2. "New Project" → "Deploy from GitHub repo" 선택
 3. `medicine-server` 디렉토리 선택
 4. 환경 변수 설정:
-   - `DATABASE_URL` (MariaDB/MySQL 연결 문자열)
+   - `SPRING_DATASOURCE_URL` (PostgreSQL 연결 문자열)
+   - `SPRING_DATASOURCE_USERNAME`
+   - `SPRING_DATASOURCE_PASSWORD`
    - `PORT` (자동 설정됨)
 5. 배포 완료 후 URL 확인 (예: `https://your-app.railway.app`)
 
@@ -138,7 +140,7 @@ node scripts/render-api-test.js
 ```bash
 cd medicine-server
 heroku create your-app-name
-heroku addons:create cleardb:ignite  # MySQL 데이터베이스
+heroku addons:create heroku-postgresql:mini
 git push heroku main
 ```
 
@@ -168,8 +170,10 @@ REACT_APP_GOOGLE_MAPS_API_KEY=AIzaSyCeAo-v9T_jpuvDn8kwpWtl8f0KOnnLXuc
 백엔드 호스팅 플랫폼의 환경 변수 설정에서:
 
 ```
-DATABASE_URL=jdbc:mariadb://host:port/database?user=user&password=password
-SPRING_PROFILES_ACTIVE=production
+SPRING_DATASOURCE_URL=jdbc:postgresql://host:5432/database
+SPRING_DATASOURCE_USERNAME=postgres
+SPRING_DATASOURCE_PASSWORD=your-password
+SPRING_PROFILES_ACTIVE=render
 ```
 
 ---
@@ -198,18 +202,18 @@ spring.web.cors.allowed-headers=*
 
 ### Railway에서 데이터베이스 추가
 
-1. Railway 프로젝트에서 "New" → "Database" → "MySQL" 선택
-2. 자동으로 `DATABASE_URL` 환경 변수가 생성됨
+1. Railway 프로젝트에서 "New" → "Database" → "PostgreSQL" 선택
+2. 연결 정보 기준으로 `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`를 설정
 3. Spring Boot가 자동으로 연결
 
 ### 수동 설정 (다른 플랫폼)
 
 `application.properties`:
 ```properties
-spring.datasource.url=jdbc:mariadb://host:port/database
+spring.datasource.url=jdbc:postgresql://host:5432/database
 spring.datasource.username=user
 spring.datasource.password=password
-spring.datasource.driver-class-name=org.mariadb.jdbc.Driver
+spring.datasource.driver-class-name=org.postgresql.Driver
 ```
 
 ---

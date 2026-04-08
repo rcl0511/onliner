@@ -51,12 +51,7 @@ dependencies {
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
 	// ───────────────────────────────────────────────────────────────────
-	// MariaDB 드라이버 (로컬 개발용)
-	// ───────────────────────────────────────────────────────────────────
-	runtimeOnly 'org.mariadb.jdbc:mariadb-java-client:2.7.4'
-
-	// ───────────────────────────────────────────────────────────────────
-	// PostgreSQL 드라이버 (Render 배포용)
+	// PostgreSQL 드라이버 (로컬/배포 공통)
 	// ───────────────────────────────────────────────────────────────────
 	runtimeOnly 'org.postgresql:postgresql'
 

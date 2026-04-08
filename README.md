@@ -1,533 +1,253 @@
-﻿# Onliner - 의약품 도매업체 명세서 관리 시스템
+# Onliner
 
-> 의약품 도매업체와 병원 간의 주문, 배송, 명세서 발행을 통합 관리하는 SaaS 플랫폼
+의약품 도매업체와 병원 간 주문, 명세서, 배송, 정산 흐름을 관리하는 웹 서비스입니다. 현재 저장소는 React 프론트엔드와 Spring Boot 백엔드가 분리된 모노레포 구조입니다.
 
-## 목차
+기획 배경과 서비스 의도는 [기획.md](/Users/lynn/Desktop/dev/onliner/기획.md)에서 확인할 수 있습니다.
 
-- [프로젝트 소개](#프로젝트-소개)
-- [기획 의도](#기획-의도)
-- [기술 스택](#기술-스택)
-- [시스템 아키텍처](#시스템-아키텍처)
-- [핵심 기능](#핵심-기능)
-- [업무 플로우](#업무-플로우)
-- [프로젝트 구조](#프로젝트-구조)
-- [시작하기](#시작하기)
-- [배포](#배포)
-- [개발 가이드](#개발-가이드)
+## 현재 구현 범위
 
----
+### 포털
 
-## 프로젝트 소개
+- `vendor` 포털: 대시보드, 주문 관리, 재고 관리, 배송 관리, 명세서 관리, 거래처 관리, 거래장, 설정
+- `hospital` 포털: 로그인, 주문, 받은 명세서 확인, 결제, 로그, 마이페이지
 
-**Onliner**는 의약품 도매업체와 병원 간의 B2B 거래를 디지털화한 통합 관리 시스템입니다. 멀티테넌트 아키텍처를 기반으로 여러 도매업체가 독립적으로 시스템을 사용할 수 있으며, 주문 관리, 재고 관리, 배송 추적, 명세서 발행 등 의약품 유통의 전 과정을 효율적으로 관리할 수 있습니다.
+### 백엔드 기능
 
-### 주요 특징
+- JWT 기반 로그인 및 권한 보호
+- Spring Security 기반 API 접근 제어
+- 주문 등록 및 상태 변경
+- 명세서 업로드, 다건 업로드, 명세서 레코드 조회/상태 변경
+- 서명 저장/조회
+- 거래처 관리 및 엑셀 업로드
+- 의약품 목록 조회, 수정, 업로드
+- 거래장 업로드/조회
+- 배송 기사 조회, PDF 배정, 배송 할당
+- 대시보드 집계 API
+- WebSocket 채팅 메시지 조회/실시간 송수신
+- Toss 결제 확인 API
+- 업체 설정 조회/수정
 
-- **멀티테넌트 아키텍처**: 업체별 독립적인 데이터 및 설정 관리
-- **역할 기반 접근 제어 (RBAC)**: 마스터 관리자, 영업사원, 창고 관리자 권한 분리
-- **실시간 재고 관리**: 창고별 재고 현황 및 임계치 알림
-- **실시간 배송 추적**: Google Maps 기반 배송 현황 모니터링
-- **자동 명세서 발행**: PDF 업로드 및 수기 입력 지원
-- **대시보드**: 매출, 배송, 재고 현황을 한눈에 파악
-- **고급 검색 및 필터링**: 다양한 조건으로 데이터 검색
+### 저장/배포 관련
 
----
-
-## 기획 의도
-
-### 문제점
-
-기존 의약품 도매업체들은 다음과 같은 문제점을 겪고 있었습니다:
-
-1. **수기 기반 업무 처리**: 주문서, 명세서를 수기로 작성하여 오류 발생 및 관리 어려움
-2. **재고 관리 비효율**: 여러 창고의 재고를 수동으로 관리하여 품절 상황 파악 지연
-3. **배송 추적 어려움**: 배송 기사의 위치와 배송 현황을 실시간으로 파악하기 어려움
-4. **거래처별 단가 관리 복잡**: 병원마다 다른 공급가를 수기로 관리하여 실수 발생
-5. **명세서 발행 비효율**: 매번 수기로 명세서를 작성하여 시간 소모
-
-### 해결 방안
-
-**Onliner**는 이러한 문제점을 해결하기 위해 다음과 같은 솔루션을 제공합니다:
-
-- **디지털화된 업무 프로세스**: 주문부터 배송, 명세서 발행까지 전 과정 자동화
-- **실시간 재고 모니터링**: 창고별 재고 현황을 실시간으로 확인하고 임계치 알림 제공
-- **Google Maps 기반 배송 추적**: 배송 기사의 준실시간 / 상태 기반 위치 표시 및 배송 현황 모니터링
-- **거래처별 단가 자동 적용**: 병원별 계약 단가를 시스템에 저장하여 자동 적용
-- **PDF 기반 명세서 자동 생성**: 업로드한 지정 양식 기반 PDF를 파싱하여 자동으로 명세서 생성
-
----
-
-### **서비스를 생각하게 된 이유**
-
-- **(1) 종이 명세서의 손상·분실**
-    - 생물학제제 등 중요 의약품 명세서를 5년간 종이로 보관 → 비 맞으면 글씨 번짐, 분실 많음
-    - 퀵/택배 배송 시, 수령인 도장(서명) 아예 못 받는 경우 다수
-    - 5년치 보관 분량, 날짜별 분류 등 관리 부담 매우 큼
-    
-- **(2) 거래장 관리의 번거로움**
-    
-    - 결제/인증시 거래장 원본 꼭 필요 →
-    놓치거나 분실 시 회사로 다시 와야 하거나, 재발급해야 함
-    
-- **(3) 아날로그 전화 주문 관행**
-    
-    - 여전히 전화로 주문 → 기록/정산/오류 리스크
-    - 업계 문화상 쉽사리 디지털화 되지 않음
-    
-- **(4) 배송 실시간 추적 불가**
-    
-    - 병원이 “언제 오냐, 배송 됐냐” 문의 시 일일이 전화 확인
-    - 자동화 시스템 부재
-    
-- **(5) 실제로 이런 소규모 도매업체가 다수**
-
-- 
+- 로컬 개발 DB: PostgreSQL
+- 배포 DB: PostgreSQL(Render 프로필)
+- 파일 스토리지: 로컬 업로드 디렉터리 + Supabase Storage(Render 프로필)
+- 프론트 배포: Netlify 기준
+- 백엔드 배포: Render 기준
 
 ## 기술 스택
 
 ### Frontend
 
-- **React 19.1.0**: 사용자 인터페이스 구축
-- **React Router DOM 7.6.1**: 클라이언트 사이드 라우팅
-- **Axios 1.13.2**: HTTP 클라이언트
-- **Google Maps API**: 실시간 배송 추적 및 지도 표시
+- React 19
+- React Router DOM 7
+- Axios
+- date-fns
+- react-icons
+- Create React App 기반 빌드(`react-scripts`)
 
 ### Backend
 
-- **Spring Boot 3.5.0**: RESTful API 서버
-- **Java 21**: 백엔드 개발 언어
-- **Spring Data JPA**: 데이터베이스 ORM
-- **MariaDB/MySQL**: 관계형 데이터베이스
-- **Apache PDFBox 2.0.29**: PDF 파싱 및 생성
-- **Apache POI 5.2.3**: Excel 파일 처리
+- Spring Boot 3.5
+- Java 21
+- Spring Web
+- Spring Data JPA
+- Spring Security
+- WebSocket
+- JWT(`jjwt`)
+- Apache POI
+- Apache PDFBox
+- Java Mail Sender
 
-### DevOps & 배포
+## 기술 스택을 사용한 이유
 
-- **Netlify**: 프론트엔드 호스팅
-- **Render**: 백엔드 서버 호스팅
-- **Docker**: 컨테이너화
+### Frontend
 
+| 기술 스택 | 선택 이유 | 다른 선택지보다 적합했던 이유 |
+| --- | --- | --- |
+| `React` | 컴포넌트 기반 UI 관리 | 병원 포털과 벤더 포털처럼 화면 수와 상태가 많은 구조에서 템플릿 중심 방식보다 재사용성과 상태 분리가 쉬움 |
+| `React Router DOM` | 역할별 라우팅 분리 | 로그인 이후 `vendor`와 `hospital` 영역을 보호 라우트로 분리하기 쉬워 단순 정적 라우팅보다 접근 제어 흐름 표현에 유리함 |
+| `Axios` + `fetch` | HTTP 통신 유연성 | 공통 API 호출과 간단한 요청을 상황에 따라 혼용할 수 있어 과도한 추상화 없이 빠르게 연동 가능함 |
+| `date-fns` | 경량 날짜 처리 | 명세서 날짜, 기간 필터, 최근 내역 계산에 필요한 함수만 가져다 쓸 수 있어 무거운 날짜 라이브러리보다 부담이 적음 |
+| `Create React App` | 초기 설정 비용 절감 | 현재 프로젝트 규모에서는 번들러 세팅보다 기능 구현 속도가 중요해 직접 빌드 환경을 구성하는 방식보다 개발 진입이 빠름 |
 
----
+### Backend
 
-## 시스템 아키텍처
+| 기술 스택 | 선택 이유 | 다른 선택지보다 적합했던 이유 |
+| --- | --- | --- |
+| `Spring Boot` | 도메인별 API 구조화 | 주문, 명세서, 결제, 거래처, 설정 기능을 컨트롤러/서비스/리포지토리 구조로 분리하기 쉬워 경량 서버 구조보다 유지보수에 유리함 |
+| `Spring Boot`로의 마이그레이션 | 백엔드 표준화, 보안 체계화, 데이터 계층 안정화 | 현재 저장소 기준으로 인증, 권한, JPA, 파일 처리, 배포 프로필을 한 프레임워크 안에서 일관되게 묶을 수 있어 기능이 늘어난 시점의 단순 서버 구조보다 운영 안정성 확보에 유리함 |
+| `Spring Data JPA` | 엔티티 중심 데이터 접근 | 주문, 명세서, 사용자, 거래처처럼 관계형 데이터가 많은 구조에서 직접 SQL 위주 방식보다 생산성과 일관성이 높음 |
+| `Spring Security` | 인증/인가 일원화 | 병원과 벤더 권한을 API 단에서 강제할 수 있어 개별 미들웨어 분산 처리보다 정책 관리가 명확함 |
+| `JWT` | 무상태 인증 처리 | 프론트와 백엔드가 분리된 구조에서 세션 저장소 없이 인증 상태를 전달하기 쉬워 서버 세션 방식보다 배포 구조에 맞음 |
+| `WebSocket` | 실시간 채팅 이벤트 처리 | 현재 구현은 `/ws/chat`에서 JWT 인증 후 채팅방 `subscribe`, `unsubscribe`, 메시지 `broadcast`, `read` 이벤트 전파에 사용되어 폴링보다 반응성과 네트워크 효율이 좋음 |
+| `Apache POI` | 엑셀 업로드 처리 | 거래처, 재고, 거래장 업로드처럼 실무에서 엑셀 입력이 많은 요구를 별도 변환 서버 없이 바로 처리할 수 있음 |
+| `Apache PDFBox` | PDF 파싱/병합/양식 출력 | 명세서 업로드와 양식 기반 출력이 핵심이라 단순 파일 저장 라이브러리보다 PDF 직접 처리 기능이 중요함 |
+| `Java Mail Sender` | 메일 확장 기반 확보 | 계정 발급, 알림, 운영 메일 기능을 같은 백엔드 안에서 확장하기 쉬워 외부 메일 처리 로직 분산보다 관리가 단순함 |
 
-### 멀티테넌트 구조
+### 인프라
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    Frontend (React)                     │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
-│  │  병원 포털    │  │  도매업체 포털 │  │  공통 UI    │   │
-│  └──────────────┘  └──────────────┘  └──────────────┘   │
-└─────────────────────────────────────────────────────────┘
-                          │
-                          │ REST API
-                          ▼
-┌─────────────────────────────────────────────────────────┐
-│              Backend (Spring Boot)                      │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
-│  │  Controller  │  │   Service    │  │  Repository  │   │
-│  └──────────────┘  └──────────────┘  └──────────────┘   │
-└─────────────────────────────────────────────────────────┘
-                          │
-                          │ JPA
-                          ▼
-┌─────────────────────────────────────────────────────────┐
-│              Database (MariaDB/MySQL)                   │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
-│  │ 업체별 데이터 │  │  공통 데이터  │  │  사용자 데이터│   │
-│  └──────────────┘  └──────────────┘  └──────────────┘   │
-└─────────────────────────────────────────────────────────┘
-```
+| 기술 스택 | 선택 이유 | 다른 선택지보다 적합했던 이유 |
+| --- | --- | --- |
+| `PostgreSQL` | 로컬/배포 공통 관계형 DB | 로컬과 배포 환경을 같은 엔진으로 맞춰 SQL, 타입, 제약조건 차이로 인한 불일치 위험을 줄이기 좋음 |
+| `Supabase Storage` | 파일 자산 저장 | 명세서 PDF와 서명 이미지처럼 객체 스토리지가 필요한 자산을 애플리케이션 서버 디스크보다 안정적으로 다루기 쉬움 |
+| `Netlify` | 프론트 정적 배포 | React 빌드 산출물을 빠르게 배포하고 프리뷰 URL을 만들기 쉬워 프론트 운영에 적합함 |
+| `Render` | Spring Boot 배포 단순화 | Dockerfile 기반으로 백엔드 앱을 바로 올릴 수 있어 별도 인프라 구성 부담이 적음 |
 
-### 인증 및 권한 관리
+## 디렉터리 구조
 
-```
-사용자 로그인
-    │
-    ├─ 업체 코드 입력 (멀티테넌트 식별)
-    ├─ 이메일/비밀번호 인증
-    └─ 역할 기반 권한 부여
-        │
-        ├─ MASTER (마스터 관리자)
-        │   └─ 모든 기능 접근 가능
-        │
-        ├─ SALES (영업사원)
-        │   └─ 주문 관리, 명세서 발행, 거래처 관리
-        │
-        └─ WAREHOUSE (창고 관리자)
-            └─ 재고 관리, 배송 관리
+```text
+.
+├── frontend/          # React 앱
+├── medicine-server/   # Spring Boot API 서버
+├── scripts/           # 보조 스크립트/문서
+├── DEPLOYMENT_GUIDE.md
+└── README.md
 ```
 
-### 데이터 분리 전략
+## 주요 경로
 
-- **업체 코드 기반 데이터 분리**: 각 도매업체의 데이터는 `companyCode`로 구분
-- **공통 데이터**: 의약품 기본 정보는 공통 DB에서 관리
-- **업체별 데이터**: 재고, 주문, 거래처 정보는 업체별로 독립 관리
+### 프론트엔드 라우트
 
----
+- `/vendor/login`
+- `/vendor/dashboard`
+- `/vendor/orders`
+- `/vendor/stocks`
+- `/vendor/delivery`
+- `/vendor/invoice`
+- `/vendor/clients`
+- `/vendor/trade`
+- `/hospital/login`
+- `/hospital/inbox`
+- `/hospital/order`
+- `/hospital/payment`
+- `/hospital/logs`
+- `/hospital/mypage`
 
-## 핵심 기능
+### 백엔드 API
 
-### 1. 멀티테넌트 로그인 시스템
+- `/api/auth`
+- `/api/orders`
+- `/api/medicines`
+- `/api/invoices`
+- `/api/invoice-records`
+- `/api/vendors`
+- `/api/payments`
+- `/api/chat`
+- `/healthz`
+- `/ws`
 
-- **서브도메인 기반 접근**: `dh-pharm.onliner.com` 형태로 업체별 접근
-- **업체 코드 입력**: 서브도메인이 없는 경우 업체 코드로 로그인
-- **역할 기반 메뉴 필터링**: 사용자 권한에 따라 메뉴 자동 필터링
+## 유저 플로우
 
-### 2. 주문 통합 관리
+### 병원 사용자 플로우
 
-- **M:M 주문 처리**: 여러 병원의 주문을 시간순/긴급도순으로 통합 관리
-- **거래처 자동 매칭**: 병원 임시 계정 발급 로직과 연동하여 자동 매칭
-- **품절 대체 안내**: 품절 시 과거 주문 이력 기반 대체 약품 추천
-- **고급 검색 및 필터링**: 주문번호, 거래처, 상태별 검색
-
-### 3. 재고 관리
-
-- **창고별/구역별 관리**: 여러 창고의 재고를 독립적으로 관리
-- **Excel 일괄 처리**: 엑셀 업로드 및 컬럼 매핑 기능
-- **재고 임계치 시각화**: 임계치 이하 품목 자동 알림
-- **제품명 마스킹**: 배포 시 민감 정보 보호
-
-### 4. 배송 관리
-
-- **실시간 위치 모니터링**: Google Maps 기반 배송 기사 위치 추적
-- **Geocoding API**: 위도/경도를 주소로 변환하여 표시
-- **PDF 할당**: 드래그 앤 드롭으로 명세서를 배송 기사에게 할당
-- **서명 확인**: 배송 완료 시 서명 이미지 확인
-
-### 5. 명세서 발행
-
-- **Grid 입력**: 엑셀처럼 화면에서 바로 행 추가하며 약품 검색/수량 입력
-- **이력 불러오기**: 해당 병원의 과거 주문 내역을 복사하여 수량만 수정
-- **PDF 업로드**: PDF 파일을 업로드하여 자동으로 명세서 생성
-- **PDF 커스터마이징**: 업체별 로고와 직인 이미지 적용
-
-### 6. 거래처 관리
-
-- **병원별 단가 설정**: 같은 약품이라도 병원마다 계약된 공급가 관리
-- **미수금 대시보드**: 병원별 미수금 총액 계산 및 장기 미수 업체 강조 표시
-- **임시 계정 발급**: 신규 병원 주문 시 버튼 클릭 한 번으로 계정 생성 및 접속 링크 발급
-- **거래장 조회**: 병원별 거래 내역 조회 및 엑셀 업로드
-
-### 7. 대시보드
-
-- **오늘 매출**: 일일 매출 현황 및 전일 대비 증감률
-- **배송 현황**: 배송 대기/진행/완료 건수
-- **재고 경고**: 임계치 이하 품목 목록
-- **미확인 명세서**: 확인이 필요한 명세서 건수
-- **최근 주문 현황**: 최근 5건의 주문 목록
-
-### 8. 권한 관리
-
-- **사용자 역할 관리**: 마스터 관리자가 사용자에게 역할 부여
-- **메뉴 접근 제어**: 역할에 따라 메뉴 자동 필터링
-- **설정 관리**: 업체 정보, PDF 커스터마이징 설정
-
----
-
-## 업무 플로우
-
-### 주문 처리 플로우
-
-```
-1. 병원에서 주문서 작성
-   │
-   ▼
-2. 도매업체 주문 통합 관리 화면에 주문 도착
-   │
-   ▼
-3. 주문 확인 및 수락/거절
-   │
-   ├─ 수락 → 재고 확인
-   │   │
-   │   ├─ 재고 충분 → 배송 준비
-   │   │
-   │   └─ 재고 부족 → 대체 약품 추천 → 병원 승인 대기
-   │
-   └─ 거절 → 병원에 거절 사유 전달
+```text
+[병원 로그인]
+    ↓
+[주문 작성]
+도매업체 선택 → 약품/수량 입력 → 주문 전송
+    ↓
+[명세서 수신 확인]
+발행된 명세서 목록 확인
+    ↓
+[명세서 상세 확인]
+상태 확인 → 수정본 확인 → 서명 확인
+    ↓
+[이력/계정 확인]
+/hospital/logs → 주문/처리 이력 확인
+/hospital/mypage → 계정 정보 확인
 ```
 
-### 배송 및 명세서 발행 플로우
+### 도매업체 사용자 플로우
 
-```
-1. 배송 준비 완료
-   │
-   ▼
-2. 명세서 발행
-   │
-   ├─ 수기 입력: Grid 형태로 제품명, 단가, 수량 입력
-   │
-   └─ PDF 업로드: PDF 파일 업로드하여 자동 파싱
-   │
-   ▼
-3. 배송 기사에게 명세서 할당 (드래그 앤 드롭)
-   │
-   ▼
-4. 배송 시작 → 실시간 위치 추적
-   │
-   ▼
-5. 배송 완료 → 서명 확인 → 명세서 상태 '완료'로 변경
-```
-
-### 재고 관리 플로우
-
-```
-1. 재고 현황 조회
-   │
-   ├─ 창고별 필터링
-   ├─ 임계치 이하 품목 확인
-   └─ Excel 업로드로 일괄 반입
-   │
-   ▼
-2. 재고 임계치 설정
-   │
-   ▼
-3. 임계치 이하 시 대시보드에 경고 표시
-```
-
-### 거래처 관리 플로우
-
-```
-1. 거래처 등록/수정
-   │
-   ├─ 기본 정보 입력 (병원명, 대표자, 사업자번호 등)
-   ├─ 병원별 단가 설정
-   └─ 계약 조건 설정
-   │
-   ▼
-2. 미수금 관리
-   │
-   ├─ 미수금 현황 대시보드 확인
-   ├─ 장기 미수 업체 강조 표시
-   └─ 거래장 조회 및 엑셀 업로드
+```text
+[도매업체 로그인]
+업체 코드 + 계정 입력
+    ↓
+[운영 현황 확인]
+매출 / 배송 / 재고 부족 / 최근 주문 확인
+    ↓
+[주문 처리]
+병원 주문 조회 → 상태 변경
+    ↓
+[명세서 작성]
+직접 작성 또는 PDF 업로드
+    ↓
+[배송 배정]
+기사 배정 → 배송 상태 관리
+    ↓
+[운영 데이터 관리]
+재고 관리, 거래처 관리, 거래장 관리
+    ↓
+[설정/권한 관리]
 ```
 
 
-## 프로젝트 구조
 
----
+```
 
 ## 시작하기
 
-### 사전 요구사항
-
-- **Node.js** 18.x 이상
-- **Java** 21
-- **Gradle** 8.x 이상
-- **MariaDB/MySQL** (선택사항, DB 없이도 테스트 가능)
-
-### 로컬 개발 환경 설정
-
-#### 1. 저장소 클론
-
-```bash
-git clone https://github.com/your-username/onliner.git
-cd onliner
-```
-
-#### 2. 프론트엔드 설정
+### 1. 프론트엔드 실행
 
 ```bash
 cd frontend
 npm install
-```
 
-#### 3. 환경 변수 설정
+### 백엔드
 
-`frontend/.env` 파일 생성:
+로컬 `application.properties` 기준 주요 값:
 
-```env
-REACT_APP_API_BASE_URL=http://localhost:8080
-REACT_APP_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
-```
+- `JWT_SECRET`
+- `TOSS_SECRET_KEY`
+- `UPLOAD_DIR`
+- `EXPORT_DIR`
+- `TEMPLATE_DIR`
 
-#### 4. 프론트엔드 실행
+Render 프로필에서 추가로 사용하는 값:
 
-```bash
-npm start
-```
+- `SPRING_DATASOURCE_URL`
+- `SPRING_DATASOURCE_USERNAME`
+- `SPRING_DATASOURCE_PASSWORD`
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `PORT`
 
-프론트엔드는 `http://localhost:3000`에서 실행됩니다.
+## 실행 프로필
 
-#### 5. 백엔드 설정
+- 기본 실행: PostgreSQL + JPA 사용
+- `render`: PostgreSQL + Supabase Storage 사용
+- `render-nodb`: DB 자동 설정 없이 폴백 계정으로 최소 기능 실행
+
+예시:
 
 ```bash
 cd medicine-server
+./gradlew bootRun --args='--spring.profiles.active=render'
 ```
 
-#### 6. 백엔드 환경 변수 설정
+## 기본 테스트 계정
 
-`medicine-server/src/main/resources/application.properties` 확인:
+`DataInitializer` 또는 폴백 로그인 기준 기본 계정이 포함되어 있습니다.
 
-```properties
-server.port=8080
-spring.datasource.url=jdbc:mariadb://localhost:3306/onliner
-spring.datasource.username=root
-spring.datasource.password=your_password
-```
+### Vendor
 
-#### 7. 백엔드 실행
+- 업체 코드: `dh-pharm`
+- `master@dh-pharm.com / 1234`
+- `sales@dh-pharm.com / 1234`
+- `warehouse@dh-pharm.com / 1234`
 
-```bash
-./gradlew bootRun
-```
+### Hospital
 
-또는 DB 없이 테스트:
-
-```bash
-./gradlew bootRun --args='--spring.profiles.active=render-nodb'
-```
-
-백엔드는 `http://localhost:8080`에서 실행됩니다.
-
-### 테스트 계정
-
-#### 도매업체 로그인
-
-- **업체 코드**: `dh-pharm` 또는 `test-company`
-- **마스터 관리자**: `master@dh-pharm.com` / `1234`
-- **영업사원**: `sales@dh-pharm.com` / `1234`
-- **창고 관리자**: `warehouse@dh-pharm.com` / `1234`
-
-#### 병원 로그인
-
-- **이메일**: `dev@master.com`
-- **비밀번호**: `1234`
-
----
-
-## 배포
-
-### 프론트엔드 배포 (Netlify)
-
-1. Netlify에 GitHub 저장소 연결
-2. 빌드 설정:
-   - **Base directory**: `frontend`
-   - **Build command**: `npm run build`
-   - **Publish directory**: `frontend/build`
-3. 환경 변수 설정:
-   - `REACT_APP_API_BASE_URL`: 백엔드 서버 URL
-   - `REACT_APP_GOOGLE_MAPS_API_KEY`: Google Maps API 키
-
-자세한 내용은 [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)를 참고하세요.
-
-### 백엔드 배포 (Render/Railway)
-
-#### Render 배포
-
-1. Render에 GitHub 저장소 연결
-2. **New Web Service** 선택
-3. 설정:
-   - **Root Directory**: `medicine-server`
-   - **Environment**: `Docker`
-   - **Dockerfile Path**: `medicine-server/Dockerfile`
-4. 환경 변수:
-   - `PORT`: 자동 설정
-   - `DATABASE_URL`: 데이터베이스 연결 문자열 (선택사항)
-
-#### Railway 배포
-
-1. Railway에 GitHub 저장소 연결
-2. `medicine-server` 디렉토리 선택
-3. 환경 변수 설정
-4. 배포 완료
-
-자세한 내용은 [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)를 참고하세요.
-
----
-
-## 개발 가이드
-
-### 코드 스타일
-
-- **ESLint**: React 코드 스타일 검사
-- **Prettier**: 코드 포맷팅 (선택사항)
-
-### 주요 패턴
-
-#### 멀티테넌트 데이터 분리
-
-```javascript
-// 업체 코드 기반 데이터 필터링
-const companyCode = user.companyCode;
-const filteredData = data.filter(item => item.companyCode === companyCode);
-```
-
-#### 역할 기반 메뉴 필터링
-
-```javascript
-const getVendorMenu = () => {
-  const permission = user.permission;
-  if (permission === 'MASTER') return allMenus;
-  if (permission === 'SALES') return salesMenus;
-  if (permission === 'WAREHOUSE') return warehouseMenus;
-};
-```
-
-#### API 호출
-
-```javascript
-const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080';
-
-const fetchData = async () => {
-  const res = await fetch(`${API_BASE}/api/endpoint`);
-  const data = await res.json();
-  return data;
-};
-```
-
-### 데이터 마스킹
-
-배포 시 민감한 정보를 보호하기 위해 데이터 마스킹을 적용합니다:
-
-```javascript
-const maskProductName = (product) => {
-  const fakeNames = ['테스트제품A', '테스트제품B', ...];
-  const index = (product.id || 0) % 10;
-  return {
-    ...product,
-    name: fakeNames[index] || `테스트제품${product.id}`,
-  };
-};
-```
-
----
-
-## 라이선스
-
-이 프로젝트는 MIT 라이선스를 따릅니다.
-
----
-
-## 기여하기
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
----
-
-## 문의
-
-프로젝트에 대한 문의사항이 있으시면 이슈를 등록해주세요.
-
----
-
-## 변경 이력
-
-### v0.1.0 (2024-06)
-- 초기 릴리스
-- 멀티테넌트 로그인 시스템
-- 주문 통합 관리
-- 재고 관리
-- 배송 관리
-- 명세서 발행
-- 거래처 관리
-- 대시보드
+- `01012345678 / temp1234`
 
 
 
+
+Docker 이미지 빌드는 [medicine-server/Dockerfile](/Users/lynn/Desktop/dev/onliner/medicine-server/Dockerfile)를 사용합니다.
+
+## 참고 문서
+
+- 서비스 기획 문서: [기획.md](/Users/lynn/Desktop/dev/onliner/기획.md)
+- 배포 상세 가이드: [DEPLOYMENT_GUIDE.md](/Users/lynn/Desktop/dev/onliner/DEPLOYMENT_GUIDE.md)
+- 프론트 배포 메모: [frontend/README_DEPLOY.md](/Users/lynn/Desktop/dev/onliner/frontend/README_DEPLOY.md)
