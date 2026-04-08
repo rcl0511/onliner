@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import authStorage from '../services/authStorage';
 import API_BASE from '../api/baseUrl';
@@ -15,11 +15,7 @@ export default function HospitalPayment() {
   const user = authStorage.getUser();
   const token = authStorage.getToken();
 
-  useEffect(() => {
-    loadPaymentData();
-  }, []);
-
-  const loadPaymentData = async () => {
+  const loadPaymentData = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/api/payments/hospital`, {
@@ -39,7 +35,11 @@ export default function HospitalPayment() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    loadPaymentData();
+  }, [loadPaymentData]);
 
   const handlePayment = async (payment) => {
     const clientKey = process.env.REACT_APP_TOSS_CLIENT_KEY;
@@ -55,6 +55,10 @@ export default function HospitalPayment() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ invoiceRef: payment.id || payment.invoiceRef, amount: payment.amount }),
       });
+      if (!createRes.ok) {
+        const errData = await createRes.json().catch(() => ({}));
+        throw new Error(errData.message || '결제 주문 생성에 실패했습니다.');
+      }
       const { orderId, amount } = await createRes.json();
 
       // 토스페이먼츠 SDK 동적 로드

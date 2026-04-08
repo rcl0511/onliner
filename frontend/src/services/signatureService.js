@@ -1,5 +1,5 @@
-import invoiceStatusService from "./invoiceStatusService";
 import authStorage from "./authStorage";
+import API_BASE from "../api/baseUrl";
 
 // 서명 서비스 - 명세서별 개별 서명 관리 및 메타데이터 수집
 class SignatureService {
@@ -10,7 +10,6 @@ class SignatureService {
     let browserVersion = 'Unknown';
     let os = 'Unknown';
 
-    // 브라우저 감지
     if (ua.indexOf('Chrome') > -1 && ua.indexOf('Edg') === -1) {
       browserName = 'Chrome';
       const match = ua.match(/Chrome\/(\d+)/);
@@ -33,37 +32,27 @@ class SignatureService {
       browserVersion = match ? match[1] : 'Unknown';
     }
 
-    // OS 감지
     if (ua.indexOf('Win') > -1) os = 'Windows';
     else if (ua.indexOf('Mac') > -1) os = 'macOS';
     else if (ua.indexOf('Linux') > -1) os = 'Linux';
     else if (ua.indexOf('Android') > -1) os = 'Android';
     else if (ua.indexOf('iOS') > -1 || ua.indexOf('iPhone') > -1 || ua.indexOf('iPad') > -1) os = 'iOS';
 
-    return {
-      browserName,
-      browserVersion,
-      os,
-      fullUserAgent: ua
-    };
+    return { browserName, browserVersion, os, fullUserAgent: ua };
   }
 
   // IP 주소 수집 (외부 API 사용)
   async getIPAddress() {
     try {
-      // 방법 1: ipify API 사용
       const response = await fetch('https://api.ipify.org?format=json');
       const data = await response.json();
       return data.ip;
-    } catch (error) {
+    } catch {
       try {
-        // 방법 2: ipapi.co 사용
         const response = await fetch('https://ipapi.co/ip/');
         const ip = await response.text();
         return ip.trim();
-      } catch (error2) {
-        console.warn('IP 주소 수집 실패:', error2);
-        // 실제 운영 환경에서는 서버에서 IP를 수집해야 함
+      } catch {
         return '서버에서 수집 필요';
       }
     }
@@ -73,8 +62,8 @@ class SignatureService {
   async collectMetadata() {
     const browserInfo = this.parseBrowserInfo();
     const ipAddress = await this.getIPAddress();
-    
-    const metadata = {
+
+    return {
       timestamp: new Date().toISOString(),
       userAgent: navigator.userAgent,
       browserName: browserInfo.browserName,
@@ -84,71 +73,84 @@ class SignatureService {
       language: navigator.language,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       screenResolution: `${window.screen.width}x${window.screen.height}`,
-      ipAddress: ipAddress,
-      // 추가 법적 증빙 정보
+      ipAddress,
       referrer: document.referrer || '직접 접속',
       url: window.location.href,
+      userId: this.getUserId(),
+      hospitalName: this.getHospitalName(),
     };
-
-    return metadata;
   }
 
-  // 명세서별 서명 저장
+  // 명세서별 서명 저장 (DB + Supabase Storage)
   async saveSignature(invoiceId, signatureData) {
     const metadata = await this.collectMetadata();
-    
-    const signatureRecord = {
-      invoiceId,
-      signatureData, // base64 이미지
-      metadata: {
-        ...metadata,
-        userId: this.getUserId(),
-        hospitalName: this.getHospitalName(),
+    const token = authStorage.getToken();
+
+    const res = await fetch(`${API_BASE}/api/invoices/${invoiceId}/signature`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
-      version: 1, // 수정 명세서 버전 관리
-    };
+      body: JSON.stringify({
+        imageDataUrl: signatureData,
+        metadata: JSON.stringify(metadata),
+      }),
+    });
 
-    // 로컬 스토리지에 명세서별로 저장
-    const key = `invoice_signature_${invoiceId}`;
-    localStorage.setItem(key, JSON.stringify(signatureRecord));
-
-    // 서명 저장 시 명세서 상태를 확인완료로 변경
-    invoiceStatusService.setStatus(invoiceId, "confirmed");
-
-    // 실제로는 서버 API 호출
-    // await fetch('/api/invoices/signature', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(signatureRecord)
-    // });
-
-    return signatureRecord;
-  }
-
-  // 명세서별 서명 불러오기
-  getSignature(invoiceId) {
-    const key = `invoice_signature_${invoiceId}`;
-    const stored = localStorage.getItem(key);
-    
-    if (stored) {
-      const record = JSON.parse(stored);
-      return {
-        signatureData: record.signatureData,
-        metadata: record.metadata,
-        version: record.version,
-      };
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || '서명 저장에 실패했습니다.');
     }
 
+    const result = await res.json();
+
+    // 로컬 캐시 (오프라인 fallback 및 빠른 UI 복원)
+    const key = `invoice_signature_${invoiceId}`;
+    localStorage.setItem(key, JSON.stringify({ signatureData, metadata, imageUrl: result.imageUrl }));
+
+    return { ...result, metadata };
+  }
+
+  // 명세서별 서명 불러오기 (DB 우선, 없으면 로컬 캐시)
+  async loadSignature(invoiceId) {
+    const token = authStorage.getToken();
+
+    try {
+      const res = await fetch(`${API_BASE}/api/invoices/${invoiceId}/signature`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        let metadata = {};
+        try { metadata = JSON.parse(data.metadata || '{}'); } catch {}
+        return { signatureData: null, imageUrl: data.imageUrl, metadata, signedAt: data.signedAt };
+      }
+    } catch {}
+
+    // fallback: 로컬 캐시
+    return this.getSignatureFromCache(invoiceId);
+  }
+
+  getSignatureFromCache(invoiceId) {
+    const key = `invoice_signature_${invoiceId}`;
+    const stored = localStorage.getItem(key);
+    if (stored) {
+      try { return JSON.parse(stored); } catch {}
+    }
     return null;
   }
 
-  // 서명 메타데이터 조회
-  getSignatureMetadata(invoiceId) {
-    const signature = this.getSignature(invoiceId);
-    return signature ? signature.metadata : null;
+  // 하위 호환 동기 메서드 (HospitalInvoice에서 사용 중)
+  getSignature(invoiceId) {
+    return this.getSignatureFromCache(invoiceId);
   }
 
-  // 사용자 정보 가져오기
+  getSignatureMetadata(invoiceId) {
+    const sig = this.getSignatureFromCache(invoiceId);
+    return sig ? sig.metadata : null;
+  }
+
   getUserId() {
     try {
       const userInfo = authStorage.getUser();
@@ -167,13 +169,10 @@ class SignatureService {
     }
   }
 
-  // 서명 삭제 (이의 신청 시)
   deleteSignature(invoiceId) {
-    const key = `invoice_signature_${invoiceId}`;
-    localStorage.removeItem(key);
+    localStorage.removeItem(`invoice_signature_${invoiceId}`);
   }
 }
 
 const signatureService = new SignatureService();
-
 export default signatureService;

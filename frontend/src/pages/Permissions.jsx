@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import authStorage from '../services/authStorage';
 import API_BASE from '../api/baseUrl';
 import '../css/common.css';
@@ -27,11 +27,7 @@ export default function Permissions() {
   const [newUser, setNewUser] = useState({ email: '', name: '', permission: 'SALES', password: '' });
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (isMaster) loadUsers();
-  }, [isMaster]);
-
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -46,7 +42,13 @@ export default function Permissions() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    if (isMaster) {
+      loadUsers();
+    }
+  }, [isMaster, loadUsers]);
 
   const handleAddUser = async (e) => {
     e.preventDefault();
@@ -81,7 +83,7 @@ export default function Permissions() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ active: String(!currentActive) }),
+        body: JSON.stringify({ active: !currentActive }),
       });
       if (!res.ok) throw new Error(await res.text());
       await loadUsers();

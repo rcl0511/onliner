@@ -24,19 +24,34 @@ const authStorage = {
     localStorage.removeItem(SESSION_KEY);
   },
   getToken() {
-    return sessionStorage.getItem(TOKEN_KEY) || "";
+    const sessionToken = sessionStorage.getItem(TOKEN_KEY);
+    if (sessionToken) {
+      return sessionToken;
+    }
+
+    const legacyToken = localStorage.getItem(TOKEN_KEY);
+    if (legacyToken) {
+      sessionStorage.setItem(TOKEN_KEY, legacyToken);
+      localStorage.removeItem(TOKEN_KEY);
+      return legacyToken;
+    }
+
+    return "";
   },
   setToken(token) {
     if (token) {
       sessionStorage.setItem(TOKEN_KEY, token);
+      localStorage.removeItem(TOKEN_KEY);
     } else {
       sessionStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(TOKEN_KEY);
     }
   },
   clearUser() {
     sessionStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(SESSION_KEY);
     sessionStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(TOKEN_KEY);
   },
 };
 

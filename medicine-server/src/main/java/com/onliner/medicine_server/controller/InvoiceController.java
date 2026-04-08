@@ -36,11 +36,12 @@ public class InvoiceController {
             return ResponseEntity.badRequest().body(Map.of("error", "업로드할 PDF 파일이 없습니다."));
         }
 
+        File tempFile = null;
+        File outputFile = null;
         try {
-            String originalName = Objects.requireNonNull(file.getOriginalFilename());
+            String originalName = file.getOriginalFilename() != null ? file.getOriginalFilename() : "invoice.pdf";
 
-            // 임시 파일로 저장 후 파싱
-            File tempFile = Objects.requireNonNull(File.createTempFile("invoice_", ".pdf"));
+            tempFile = File.createTempFile("invoice_", ".pdf");
             Files.copy(file.getInputStream(), tempFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
 
             String parsedText = PdfUtil.parseAndDedupeText(tempFile);
@@ -50,9 +51,7 @@ public class InvoiceController {
             String safeHosp = hospitalName.replaceAll("[^가-힣a-zA-Z0-9_-]", "");
             String finalFilename = safeHosp + "_" + orderDate + ".pdf";
 
-            // 템플릿 오버레이 후 Supabase 업로드
-            File outputFile = File.createTempFile("output_", ".pdf");
-            // 템플릿이 없으면 원본 그대로 업로드
+            outputFile = File.createTempFile("output_", ".pdf");
             String publicUrl;
             try {
                 String templatePath = Objects.requireNonNull(
@@ -64,9 +63,6 @@ public class InvoiceController {
                 publicUrl = storageService.uploadPdf(Files.readAllBytes(tempFile.toPath()), finalFilename);
             }
 
-            tempFile.delete();
-            outputFile.delete();
-
             return ResponseEntity.ok(Map.of(
                 "message", "성공",
                 "pdfUrl", "/api/invoices/exports/" + finalFilename,
@@ -77,6 +73,9 @@ public class InvoiceController {
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "처리 실패", "detail", e.getMessage()));
+        } finally {
+            if (tempFile != null) tempFile.delete();
+            if (outputFile != null) outputFile.delete();
         }
     }
 
@@ -90,10 +89,12 @@ public class InvoiceController {
 
         for (MultipartFile file : files) {
             if (file.isEmpty()) continue;
+            File tempFile = null;
+            File outputFile = null;
             try {
-                String originalName = Objects.requireNonNull(file.getOriginalFilename());
+                String originalName = file.getOriginalFilename() != null ? file.getOriginalFilename() : "invoice.pdf";
 
-                File tempFile = Objects.requireNonNull(File.createTempFile("invoice_", ".pdf"));
+                tempFile = File.createTempFile("invoice_", ".pdf");
                 Files.copy(file.getInputStream(), tempFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
 
                 String parsedText = PdfUtil.parseAndDedupeText(tempFile);
@@ -103,7 +104,7 @@ public class InvoiceController {
                 String safeHosp = hospitalName.replaceAll("[^가-힣a-zA-Z0-9_-]", "");
                 String finalFilename = safeHosp + "_" + orderDate + "_" + System.currentTimeMillis() + ".pdf";
 
-                File outputFile = File.createTempFile("output_", ".pdf");
+                outputFile = File.createTempFile("output_", ".pdf");
                 String publicUrl;
                 try {
                     String templatePath = Objects.requireNonNull(
@@ -115,9 +116,6 @@ public class InvoiceController {
                     publicUrl = storageService.uploadPdf(Files.readAllBytes(tempFile.toPath()), finalFilename);
                 }
 
-                tempFile.delete();
-                outputFile.delete();
-
                 Map<String, String> result = new HashMap<>();
                 result.put("originalName", originalName);
                 result.put("pdfUrl", "/api/invoices/exports/" + finalFilename);
@@ -127,7 +125,10 @@ public class InvoiceController {
                 results.add(result);
 
             } catch (IOException ex) {
-                ex.printStackTrace();
+                // 개별 파일 실패는 건너뛰고 계속 처리
+            } finally {
+                if (tempFile != null) tempFile.delete();
+                if (outputFile != null) outputFile.delete();
             }
         }
 

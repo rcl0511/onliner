@@ -1,61 +1,52 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import '../css/VendorOrdersManagement.css';
 import '../css/common.css';
 import authStorage from "../services/authStorage";
+import API_BASE from "../api/baseUrl";
 
 const VendorOrdersManagement = () => {
     const [orders, setOrders] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [selectedOrders, setSelectedOrders] = useState(new Set());
     const [detailOrder, setDetailOrder] = useState(null);
 
+    const token = authStorage.getToken();
+
+    const loadOrders = useCallback(async () => {
+        setLoading(true);
+        try {
+            const res = await fetch(`${API_BASE}/api/orders`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!res.ok) throw new Error();
+            const data = await res.json();
+            // items 필드가 JSON 문자열이면 파싱
+            const parsed = data.map((o) => ({
+                ...o,
+                items: typeof o.items === 'string' ? (() => { try { return JSON.parse(o.items); } catch { return []; } })() : (o.items || []),
+                total: o.totalAmount || 0,
+                client: o.hospitalName || '병원',
+            }));
+            setOrders(parsed);
+        } catch {
+            setOrders([]);
+        } finally {
+            setLoading(false);
+        }
+    }, [token]);
+
     useEffect(() => {
-        const loadOrders = async () => {
-            const base = await fetch('/vendor_orders.json')
-                .then(res => res.json())
-                .catch(() => []);
-
-            const local = JSON.parse(localStorage.getItem("hospital_orders_outbox") || "[]");
-            const user = authStorage.getUser();
-            const companyCode = user.companyCode || "dh-pharm";
-            const mapped = local
-                .filter((o) => o.vendorCode === companyCode)
-                .map((o) => ({
-                    id: o.id,
-                    client: o.hospitalName || "병원",
-                    manager: "병원 담당자",
-                    status: o.status || "PENDING",
-                    total: o.totalAmount || 0,
-                    createdAt: o.createdAt,
-                    items: o.items || []
-                }));
-
-            setOrders([...(base || []), ...mapped]);
-        };
-
         loadOrders();
-
-        const onStorage = (e) => {
-            if (e.key === "hospital_orders_outbox") {
-                loadOrders();
-            }
-        };
-        const onFocus = () => loadOrders();
-        window.addEventListener("storage", onStorage);
-        window.addEventListener("focus", onFocus);
-        return () => {
-            window.removeEventListener("storage", onStorage);
-            window.removeEventListener("focus", onFocus);
-        };
-    }, []);
+    }, [loadOrders]);
 
     const filteredOrders = useMemo(() => {
         return orders.filter(o => {
             const matchesStatus = statusFilter === 'ALL' || o.status === statusFilter;
-            const matchesSearch = !searchQuery || 
-                o.client.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                o.id.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesSearch = !searchQuery ||
+                (o.client || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (o.id || '').toLowerCase().includes(searchQuery.toLowerCase());
             return matchesStatus && matchesSearch;
         });
     }, [orders, statusFilter, searchQuery]);
@@ -67,18 +58,38 @@ const VendorOrdersManagement = () => {
         setSelectedOrders(next);
     };
 
-    const updateLocalOrderStatus = (orderId, status) => {
-        const local = JSON.parse(localStorage.getItem("hospital_orders_outbox") || "[]");
-        const updated = local.map((o) => (o.id === orderId ? { ...o, status } : o));
-        localStorage.setItem("hospital_orders_outbox", JSON.stringify(updated));
-        setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status } : o)));
+    const updateOrderStatus = async (orderId, status) => {
+        try {
+            const res = await fetch(`${API_BASE}/api/orders/${orderId}/status`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ status }),
+            });
+            if (!res.ok) throw new Error();
+            setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status } : o)));
+        } catch {
+            alert('상태 변경에 실패했습니다.');
+        }
     };
 
     const getStatusStyle = (status) => {
         switch (status) {
             case 'ACCEPTED': return { background: '#E0E7FF', color: '#475BE8' };
+            case 'REJECTED': return { background: '#FEF2F2', color: '#EF4444' };
             case 'PENDING': return { background: '#F1F5F9', color: '#64748B' };
             default: return { background: '#F1F5F9', color: '#94A3B8' };
+        }
+    };
+
+    const getStatusLabel = (status) => {
+        switch (status) {
+            case 'ACCEPTED': return '수락됨';
+            case 'REJECTED': return '거절됨';
+            case 'PENDING': return '대기중';
+            default: return status;
         }
     };
 
@@ -90,25 +101,27 @@ const VendorOrdersManagement = () => {
                     <p style={{ margin: 0, color: '#64748B', fontSize: '14px' }}>실시간 주문 현황 파악 및 배송 지시를 관리합니다.</p>
                 </div>
                 <div style={{ display: 'flex', gap: '12px' }}>
-                    <div style={{ position: 'relative' }}>
-                        <input 
-                            type="text" 
-                            placeholder="주문번호 또는 거래처 검색..." 
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="input-field"
-                            style={{ width: '300px' }}
-                        />
-                    </div>
-                    <select 
-                        value={statusFilter} 
+                    <input
+                        type="text"
+                        placeholder="주문번호 또는 거래처 검색..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="input-field"
+                        style={{ width: '300px' }}
+                    />
+                    <select
+                        value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
                         className="select-field"
                     >
                         <option value="ALL">전체 상태</option>
                         <option value="PENDING">대기중</option>
                         <option value="ACCEPTED">수락됨</option>
+                        <option value="REJECTED">거절됨</option>
                     </select>
+                    <button className="btn-outline" onClick={loadOrders} style={{ fontSize: '13px' }}>
+                        새로고침
+                    </button>
                 </div>
             </div>
 
@@ -116,57 +129,72 @@ const VendorOrdersManagement = () => {
                 <div style={{ padding: '20px 24px', borderBottom: '1px solid #F1F5F9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F8FAFC' }}>
                     <span style={{ fontSize: '14px', fontWeight: 600, color: '#64748B' }}>총 {filteredOrders.length}건의 주문</span>
                     {selectedOrders.size > 0 && (
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                            <button className="btn-small">일괄 수락 ({selectedOrders.size})</button>
-                        </div>
+                        <button
+                            className="btn-small"
+                            onClick={() => {
+                                selectedOrders.forEach((id) => updateOrderStatus(id, 'ACCEPTED'));
+                                setSelectedOrders(new Set());
+                            }}
+                        >
+                            일괄 수락 ({selectedOrders.size})
+                        </button>
                     )}
                 </div>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                        <tr style={{ borderBottom: '1px solid #F1F5F9', background: '#FFFFFF' }}>
-                            <th style={{ width: '50px', padding: '16px' }}>
-                                <input type="checkbox" onChange={(e) => {
-                                    if (e.target.checked) setSelectedOrders(new Set(filteredOrders.map(o => o.id)));
-                                    else setSelectedOrders(new Set());
-                                }} />
-                            </th>
-                            {['주문번호', '거래처', '주문일시', '금액', '상태', '관리'].map(h => (
-                                <th key={h} style={{ textAlign: 'left', padding: '16px', fontSize: '13px', fontWeight: 600, color: '#94A3B8' }}>{h}</th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredOrders.map((o) => (
-                            <tr key={o.id} style={{ borderBottom: '1px solid #F1F5F9', transition: 'background 0.2s' }}>
-                                <td style={{ padding: '16px', textAlign: 'center' }}>
-                                    <input type="checkbox" checked={selectedOrders.has(o.id)} onChange={() => toggleSelect(o.id)} />
-                                </td>
-                                <td style={{ padding: '16px', fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>{o.id}</td>
-                                <td style={{ padding: '16px', fontSize: '14px', color: '#1E293B' }}>{o.client}</td>
-                                <td style={{ padding: '16px', fontSize: '14px', color: '#64748B' }}>{o.date || o.createdAt}</td>
-                                <td style={{ padding: '16px', fontSize: '14px', fontWeight: 600, color: '#1E293B' }}>{o.total?.toLocaleString()}원</td>
-                                <td style={{ padding: '16px' }}>
-                                    <span style={{ 
-                                        padding: '6px 12px', 
-                                        borderRadius: '8px', 
-                                        fontSize: '12px', 
-                                        fontWeight: 700,
-                                        ...getStatusStyle(o.status)
-                                    }}>{o.status}</span>
-                                </td>
-                                <td style={{ padding: '16px' }}>
-                                    <button
-                                        className="btn-outline"
-                                        style={{ fontSize: '12px', padding: '6px 12px' }}
-                                        onClick={() => setDetailOrder(o)}
-                                    >
-                                        상세보기
-                                    </button>
-                                </td>
+
+                {loading ? (
+                    <div style={{ padding: '60px', textAlign: 'center', color: '#94A3B8' }}>로딩 중...</div>
+                ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                            <tr style={{ borderBottom: '1px solid #F1F5F9', background: '#FFFFFF' }}>
+                                <th style={{ width: '50px', padding: '16px' }}>
+                                    <input type="checkbox" onChange={(e) => {
+                                        if (e.target.checked) setSelectedOrders(new Set(filteredOrders.map(o => o.id)));
+                                        else setSelectedOrders(new Set());
+                                    }} />
+                                </th>
+                                {['주문번호', '거래처', '주문일시', '금액', '상태', '관리'].map(h => (
+                                    <th key={h} style={{ textAlign: 'left', padding: '16px', fontSize: '13px', fontWeight: 600, color: '#94A3B8' }}>{h}</th>
+                                ))}
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {filteredOrders.length === 0 ? (
+                                <tr>
+                                    <td colSpan={7} style={{ padding: '60px', textAlign: 'center', color: '#94A3B8', fontSize: '14px' }}>
+                                        주문이 없습니다.
+                                    </td>
+                                </tr>
+                            ) : filteredOrders.map((o) => (
+                                <tr key={o.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                                    <td style={{ padding: '16px', textAlign: 'center' }}>
+                                        <input type="checkbox" checked={selectedOrders.has(o.id)} onChange={() => toggleSelect(o.id)} />
+                                    </td>
+                                    <td style={{ padding: '16px', fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>{o.id}</td>
+                                    <td style={{ padding: '16px', fontSize: '14px', color: '#1E293B' }}>{o.client}</td>
+                                    <td style={{ padding: '16px', fontSize: '14px', color: '#64748B' }}>
+                                        {o.createdAt ? new Date(o.createdAt).toLocaleString('ko-KR') : '-'}
+                                    </td>
+                                    <td style={{ padding: '16px', fontSize: '14px', fontWeight: 600, color: '#1E293B' }}>{(o.total || 0).toLocaleString()}원</td>
+                                    <td style={{ padding: '16px' }}>
+                                        <span style={{ padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, ...getStatusStyle(o.status) }}>
+                                            {getStatusLabel(o.status)}
+                                        </span>
+                                    </td>
+                                    <td style={{ padding: '16px' }}>
+                                        <button
+                                            className="btn-outline"
+                                            style={{ fontSize: '12px', padding: '6px 12px' }}
+                                            onClick={() => setDetailOrder(o)}
+                                        >
+                                            상세보기
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
             </div>
 
             {detailOrder && (
@@ -198,21 +226,33 @@ const VendorOrdersManagement = () => {
                                 </tbody>
                             </table>
                         ) : (
-                            <div style={{ color: '#94A3B8', fontSize: '13px' }}>
-                                상세 품목 정보가 없습니다.
-                            </div>
+                            <div style={{ color: '#94A3B8', fontSize: '13px' }}>상세 품목 정보가 없습니다.</div>
                         )}
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' }}>
                             <button className="btn-secondary" onClick={() => setDetailOrder(null)}>닫기</button>
-                            <button
-                                className="btn-primary"
-                                onClick={() => {
-                                    updateLocalOrderStatus(detailOrder.id, "ACCEPTED");
-                                    setDetailOrder(null);
-                                }}
-                            >
-                                수락
-                            </button>
+                            {detailOrder.status === 'PENDING' && (
+                                <>
+                                    <button
+                                        className="btn-outline"
+                                        style={{ color: '#EF4444', borderColor: '#EF4444' }}
+                                        onClick={() => {
+                                            updateOrderStatus(detailOrder.id, 'REJECTED');
+                                            setDetailOrder(null);
+                                        }}
+                                    >
+                                        거절
+                                    </button>
+                                    <button
+                                        className="btn-primary"
+                                        onClick={() => {
+                                            updateOrderStatus(detailOrder.id, 'ACCEPTED');
+                                            setDetailOrder(null);
+                                        }}
+                                    >
+                                        수락
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>

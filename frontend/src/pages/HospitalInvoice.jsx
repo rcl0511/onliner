@@ -16,6 +16,8 @@ const HospitalInvoice = () => {
   const [disputeType, setDisputeType] = useState('');
   const [disputeMemo, setDisputeMemo] = useState('');
   const [showSignatureInfo, setShowSignatureInfo] = useState(false);
+  const [signatureSaving, setSignatureSaving] = useState(false);
+  const [signatureError, setSignatureError] = useState('');
 
   const loadInvoice = useCallback(() => {
     // 임시 데이터
@@ -75,22 +77,29 @@ const HospitalInvoice = () => {
     loadInvoice();
   }, [searchParams, loadInvoice]);
 
-  // 명세서 로드 후 해당 명세서의 서명 불러오기
+  // 명세서 로드 후 서명 불러오기 (DB 우선, 없으면 캐시)
   useEffect(() => {
-    if (invoiceId) {
-      const saved = signatureService.getSignature(invoiceId);
+    if (!invoiceId) return;
+    signatureService.loadSignature(invoiceId).then((saved) => {
       if (saved) {
-        setSignature(saved.signatureData);
-        setSignatureMetadata(saved.metadata);
+        setSignature(saved.signatureData || saved.imageUrl || null);
+        setSignatureMetadata(saved.metadata || null);
       }
-    }
+    });
   }, [invoiceId]);
 
   const handleSignatureSave = async (signatureData) => {
-    // 명세서별 개별 서명 저장 (메타데이터 포함)
-    const signatureRecord = await signatureService.saveSignature(invoiceId, signatureData);
-    setSignature(signatureData);
-    setSignatureMetadata(signatureRecord.metadata);
+    setSignatureSaving(true);
+    setSignatureError('');
+    try {
+      const signatureRecord = await signatureService.saveSignature(invoiceId, signatureData);
+      setSignature(signatureData);
+      setSignatureMetadata(signatureRecord.metadata);
+    } catch (err) {
+      setSignatureError(err.message || '서명 저장 중 오류가 발생했습니다.');
+    } finally {
+      setSignatureSaving(false);
+    }
   };
 
   const handleConfirm = async () => {
@@ -263,10 +272,16 @@ const HospitalInvoice = () => {
         <div className="invoice-action-panel">
           <div className="action-panel-section">
             <h3>서명</h3>
-            <SignaturePad 
+            <SignaturePad
               onSave={handleSignatureSave}
-              savedSignature={signature}
+              savedSignature={typeof signature === 'string' && signature.startsWith('data:') ? signature : null}
             />
+            {signatureSaving && (
+              <p style={{ fontSize: 13, color: '#475BE8', marginTop: 8 }}>서명 저장 중...</p>
+            )}
+            {signatureError && (
+              <p style={{ fontSize: 13, color: '#EF4444', marginTop: 8 }}>{signatureError}</p>
+            )}
             {signatureMetadata && (
               <div className="signature-info">
                 <button 

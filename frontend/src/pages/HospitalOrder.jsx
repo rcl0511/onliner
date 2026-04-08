@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "../css/HospitalOrder.css";
 import authStorage from "../services/authStorage";
+import API_BASE from "../api/baseUrl";
 import { fetchAllMedicines } from "../api/medicineApi";
 
 const vendorOptions = [
@@ -24,7 +25,10 @@ export default function HospitalOrder() {
   const [medicineOptions, setMedicineOptions] = useState([]);
   const [loadingMedicines, setLoadingMedicines] = useState(false);
   const [medicineError, setMedicineError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState("");
+  const [submitError, setSubmitError] = useState("");
+
   const totalQuantity = items.reduce(
     (sum, item) => sum + Number(item.quantity || 0),
     0
@@ -84,9 +88,10 @@ export default function HospitalOrder() {
     setItems(next);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitMessage("");
+    setSubmitError("");
 
     const hasInvalid = items.some(
       (item) => !item.name || Number(item.quantity || 0) <= 0
@@ -97,22 +102,40 @@ export default function HospitalOrder() {
     }
 
     const user = authStorage.getUser();
+    const token = authStorage.getToken();
     const orderData = {
       id: `ORDER-${Date.now()}`,
       vendorCode,
       vendorName: vendorOptions.find((v) => v.code === vendorCode)?.name || "도매업체",
-      hospitalId: user.hospitalId || "hospital-snu",
-      hospitalName: user.hospitalName || "서울대학교병원",
-      items,
+      hospitalId: user.hospitalId || "",
+      hospitalName: user.hospitalName || "",
+      items: JSON.stringify(items),
       totalAmount,
-      createdAt: new Date().toISOString(),
-      status: "PENDING",
     };
 
-    const existing = JSON.parse(localStorage.getItem("hospital_orders_outbox") || "[]");
-    localStorage.setItem("hospital_orders_outbox", JSON.stringify([orderData, ...existing]));
-    setSubmitMessage("주문서가 전송되었습니다.");
-    setItems([{ name: "", spec: "", quantity: 1, unit: "", unitPrice: 0 }]);
+    setSubmitting(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/orders`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(orderData),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "주문 전송에 실패했습니다.");
+      }
+
+      setSubmitMessage("주문서가 전송되었습니다.");
+      setItems([{ name: "", spec: "", quantity: 1, unit: "", unitPrice: 0 }]);
+    } catch (err) {
+      setSubmitError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -217,11 +240,14 @@ export default function HospitalOrder() {
         </div>
 
         <div className="order-actions">
-          <button type="submit" className="btn-primary">
-            주문서 전송
+          <button type="submit" className="btn-primary" disabled={submitting}>
+            {submitting ? "전송 중..." : "주문서 전송"}
           </button>
         </div>
         {submitMessage && <div className="order-success">{submitMessage}</div>}
+        {submitError && (
+          <div className="order-error" style={{ marginTop: 8 }}>{submitError}</div>
+        )}
       </form>
     </div>
   );

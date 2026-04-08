@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.Optional;
 
 public interface MedicineRepository extends JpaRepository<Medicine, Long> {
-    // 이름으로 조회 (Controller에서 검색 기능을 쓸 때)
-    // List<Medicine> findByNameContainingIgnoreCase(String name);
+    // 이름으로 조회
+    List<Medicine> findByNameContainingIgnoreCase(String name);
 
     // 중복 검사용
     boolean existsByNo(Integer no);

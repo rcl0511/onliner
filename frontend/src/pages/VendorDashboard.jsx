@@ -14,29 +14,68 @@ const VendorDashboard = () => {
     const [unconfirmedInvoices, setUnconfirmedInvoices] = useState(0);
 
     useEffect(() => {
+        const user = authStorage.getUser();
         const token = authStorage.getToken();
-        fetch(`${API_BASE}/api/dashboard/vendor`, {
-            headers: { Authorization: `Bearer ${token}` },
-        })
-            .then((res) => (res.ok ? res.json() : Promise.reject()))
-            .then((data) => {
+
+        const loadRecentOrders = async () => {
+            try {
+                const res = await fetch(`${API_BASE}/api/orders`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                if (!res.ok) return [];
+                const data = await res.json();
+                return data.map((order) => ({
+                    id: order.id,
+                    client: order.hospitalName || '병원',
+                    manager: '병원 담당자',
+                    status: order.status || 'PENDING',
+                    total: order.totalAmount || 0,
+                }));
+            } catch {
+                return [];
+            }
+        };
+
+        const loadDashboard = async () => {
+            try {
+                const [dashboardRes, recentOrders] = await Promise.all([
+                    fetch(`${API_BASE}/api/dashboard/vendor`, {
+                        headers: { Authorization: `Bearer ${token}` },
+                    }),
+                    loadRecentOrders(),
+                ]);
+
+                const data = dashboardRes.ok ? await dashboardRes.json() : {};
                 setTodaySales(data.todaySales || {});
                 setDeliveryStats(data.deliveryStats || {});
                 setLowStockItems(data.lowStockItems || []);
                 setUnconfirmedInvoices(data.unconfirmedInvoices || 0);
-            })
-            .catch(() => {
+                setOrders(data.recentOrders || recentOrders);
+            } catch {
                 setDeliveryStats({ pending: 0, inProgress: 0, completed: 0 });
                 setTodaySales({ totalSales: 0, changeRate: 0 });
-            });
+                setOrders(await loadRecentOrders());
+            }
+        };
+
+        loadDashboard();
     }, []);
 
     const getStatusColor = (status) => {
         switch (status) {
-            case '수락': return '#475BE8';
-            case '대기': return '#64748B';
-            case '배송중': return '#475BE8';
+            case 'ACCEPTED': return '#475BE8';
+            case 'PENDING': return '#64748B';
+            case 'REJECTED': return '#EF4444';
             default: return '#94A3B8';
+        }
+    };
+
+    const getStatusLabel = (status) => {
+        switch (status) {
+            case 'ACCEPTED': return '수락됨';
+            case 'PENDING': return '대기중';
+            case 'REJECTED': return '거절됨';
+            default: return status;
         }
     };
 
@@ -45,7 +84,7 @@ const VendorDashboard = () => {
             <div className="vendor-dashboard-widgets" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '32px' }}>
                 {[
                     { label: '오늘 매출', value: (todaySales?.totalSales ?? 0).toLocaleString() + '원', change: (todaySales?.changeRate >= 0 ? '+' : '') + (todaySales?.changeRate ?? 0) + '%', icon: '💰' },
-                    { label: '배송 대기', value: (deliveryStats.pending + deliveryStats.inProgress) + '건', detail: `대기 ${deliveryStats.pending} / 진행 ${deliveryStats.inProgress}`, icon: '🚚' },
+                    { label: '배송 대기', value: ((deliveryStats?.pending ?? 0) + (deliveryStats?.inProgress ?? 0)) + '건', detail: `대기 ${deliveryStats?.pending ?? 0} / 진행 ${deliveryStats?.inProgress ?? 0}`, icon: '🚚' },
                     { label: '재고 부족', value: lowStockItems.length + '개', detail: '임계치 이하 품목', icon: '📦' },
                     { label: '미확인 명세서', value: unconfirmedInvoices + '건', detail: '확인 필요', icon: '📄' }
                 ].map((w, i) => (
@@ -73,17 +112,25 @@ const VendorDashboard = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {orders.slice(0, 5).map((o, idx) => (
-                                <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                                    <td style={{ padding: '16px 12px', fontSize: '14px', color: '#1E293B', fontWeight: 500 }}>{o.id}</td>
-                                    <td style={{ padding: '16px 12px', fontSize: '14px', color: '#1E293B' }}>{o.client}</td>
-                                    <td style={{ padding: '16px 12px', fontSize: '14px', color: '#64748B' }}>{o.manager}</td>
-                                    <td style={{ padding: '16px 12px' }}>
-                                        <span style={{ fontSize: '12px', padding: '4px 10px', borderRadius: '6px', background: getStatusColor(o.status) + '15', color: getStatusColor(o.status), fontWeight: 700 }}>{o.status}</span>
+                            {orders.length === 0 ? (
+                                <tr>
+                                    <td colSpan={5} style={{ padding: '32px 12px', textAlign: 'center', color: '#94A3B8', fontSize: '14px' }}>
+                                        표시할 최근 주문이 없습니다.
                                     </td>
-                                    <td style={{ padding: '16px 12px', fontSize: '14px', color: '#1E293B', fontWeight: 600 }}>{o.total?.toLocaleString()}원</td>
                                 </tr>
-                            ))}
+                            ) : (
+                                orders.slice(0, 5).map((o, idx) => (
+                                    <tr key={o.id || idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                                        <td style={{ padding: '16px 12px', fontSize: '14px', color: '#1E293B', fontWeight: 500 }}>{o.id}</td>
+                                        <td style={{ padding: '16px 12px', fontSize: '14px', color: '#1E293B' }}>{o.client}</td>
+                                        <td style={{ padding: '16px 12px', fontSize: '14px', color: '#64748B' }}>{o.manager}</td>
+                                        <td style={{ padding: '16px 12px' }}>
+                                            <span style={{ fontSize: '12px', padding: '4px 10px', borderRadius: '6px', background: getStatusColor(o.status) + '15', color: getStatusColor(o.status), fontWeight: 700 }}>{getStatusLabel(o.status)}</span>
+                                        </td>
+                                        <td style={{ padding: '16px 12px', fontSize: '14px', color: '#1E293B', fontWeight: 600 }}>{o.total?.toLocaleString()}원</td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>

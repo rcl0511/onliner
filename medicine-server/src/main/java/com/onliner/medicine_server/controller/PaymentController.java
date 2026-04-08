@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.context.annotation.Profile;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -88,9 +89,17 @@ public class PaymentController {
 
         String invoiceRef = (String) body.get("invoiceRef");
         Object amountObj = body.get("amount");
-        BigDecimal amount = amountObj instanceof Number
-                ? BigDecimal.valueOf(((Number) amountObj).doubleValue())
-                : new BigDecimal(amountObj.toString());
+        if (amountObj == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "amount가 필요합니다.");
+        }
+        BigDecimal amount;
+        try {
+            amount = amountObj instanceof Number
+                    ? BigDecimal.valueOf(((Number) amountObj).doubleValue())
+                    : new BigDecimal(amountObj.toString());
+        } catch (NumberFormatException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "amount 형식이 올바르지 않습니다.");
+        }
 
         String orderId = "ORDER-" + hospitalId + "-" + System.currentTimeMillis();
 
@@ -125,8 +134,17 @@ public class PaymentController {
         // 토스페이먼츠 결제 승인 API 호출
         try {
             String credentials = Base64.getEncoder().encodeToString((tossSecretKey + ":").getBytes(StandardCharsets.UTF_8));
-            String requestBody = String.format("{\"paymentKey\":\"%s\",\"orderId\":\"%s\",\"amount\":%s}",
-                    paymentKey, orderId, amountStr);
+            Map<String, Object> tossBody = new LinkedHashMap<>();
+            tossBody.put("paymentKey", paymentKey);
+            tossBody.put("orderId", orderId);
+            BigDecimal parsedAmount;
+            try {
+                parsedAmount = new BigDecimal(amountStr);
+            } catch (NumberFormatException e) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "amount 형식이 올바르지 않습니다: " + amountStr);
+            }
+            tossBody.put("amount", parsedAmount);
+            String requestBody = new ObjectMapper().writeValueAsString(tossBody);
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://api.tosspayments.com/v1/payments/confirm"))

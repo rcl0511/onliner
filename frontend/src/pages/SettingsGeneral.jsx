@@ -8,7 +8,7 @@ export default function SettingsGeneral() {
   const token = authStorage.getToken();
   const isMaster = user.permission === 'MASTER';
 
-  const [settings, setSettings] = useState({
+  const defaultSettings = {
     companyName: user.companyName || '',
     address: '',
     phone: '',
@@ -17,23 +17,32 @@ export default function SettingsGeneral() {
     representative: '',
     logoPath: null,
     sealPath: null,
-  });
+  };
+  const [settings, setSettings] = useState(defaultSettings);
+  const [savedSettings, setSavedSettings] = useState(defaultSettings);
   const [logoFile, setLogoFile] = useState(null);
   const [sealFile, setSealFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
   const [sealPreview, setSealPreview] = useState(null);
+  const [savedLogoPreview, setSavedLogoPreview] = useState(null);
+  const [savedSealPreview, setSavedSealPreview] = useState(null);
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (!companyCode) return;
+
+    let active = true;
     fetch(`${API_BASE}/api/vendors/${companyCode}/settings`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then((data) => {
-        setSettings({
+        if (!active) {
+          return;
+        }
+        const loaded = {
           companyName: data.companyName || user.companyName || '',
           address: data.address || '',
           phone: data.phone || '',
@@ -42,12 +51,33 @@ export default function SettingsGeneral() {
           representative: data.representative || '',
           logoPath: data.logoPath || null,
           sealPath: data.sealPath || null,
-        });
-        if (data.logoPath) setLogoPreview(`${API_BASE}${data.logoPath}`);
-        if (data.sealPath) setSealPreview(`${API_BASE}${data.sealPath}`);
+        };
+        setSettings(loaded);
+        setSavedSettings(loaded);
+        const logo = data.logoPath ? `${API_BASE}${data.logoPath}` : null;
+        const seal = data.sealPath ? `${API_BASE}${data.sealPath}` : null;
+        setLogoPreview(logo);
+        setSealPreview(seal);
+        setSavedLogoPreview(logo);
+        setSavedSealPreview(seal);
       })
       .catch(() => {});
-  }, [companyCode]);
+
+    return () => {
+      active = false;
+    };
+  }, [companyCode, token, user.companyName]);
+
+  useEffect(() => {
+    return () => {
+      if (logoPreview?.startsWith('blob:')) {
+        URL.revokeObjectURL(logoPreview);
+      }
+      if (sealPreview?.startsWith('blob:')) {
+        URL.revokeObjectURL(sealPreview);
+      }
+    };
+  }, [logoPreview, sealPreview]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -58,8 +88,19 @@ export default function SettingsGeneral() {
     const file = e.target.files[0];
     if (!file) return;
     const preview = URL.createObjectURL(file);
-    if (type === 'logo') { setLogoFile(file); setLogoPreview(preview); }
-    else { setSealFile(file); setSealPreview(preview); }
+    if (type === 'logo') {
+      if (logoPreview?.startsWith('blob:')) {
+        URL.revokeObjectURL(logoPreview);
+      }
+      setLogoFile(file);
+      setLogoPreview(preview);
+    } else {
+      if (sealPreview?.startsWith('blob:')) {
+        URL.revokeObjectURL(sealPreview);
+      }
+      setSealFile(file);
+      setSealPreview(preview);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -82,6 +123,11 @@ export default function SettingsGeneral() {
         body: formData,
       });
       if (!res.ok) throw new Error(await res.text());
+      setSavedSettings(settings);
+      setSavedLogoPreview(logoPreview);
+      setSavedSealPreview(sealPreview);
+      setLogoFile(null);
+      setSealFile(null);
       setSuccessMsg('설정이 저장되었습니다.');
     } catch (err) {
       setError('저장 실패: ' + err.message);
@@ -201,7 +247,13 @@ export default function SettingsGeneral() {
           <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
             <button
               type="button"
-              onClick={() => window.location.reload()}
+              onClick={() => {
+                setSettings(savedSettings);
+                setLogoFile(null);
+                setSealFile(null);
+                setLogoPreview(savedLogoPreview);
+                setSealPreview(savedSealPreview);
+              }}
               style={{ padding: '10px 24px', background: '#F1F5F9', color: '#64748B', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}
             >
               취소

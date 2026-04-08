@@ -1,9 +1,11 @@
-// src/main/java/com/onliner/medicine_server/controller/MedicineController.java
 package com.onliner.medicine_server.controller;
 
 import com.onliner.medicine_server.entity.Medicine;
 import com.onliner.medicine_server.repository.MedicineRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,25 +17,22 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import org.springframework.context.annotation.Profile;
 
 @RestController
 @RequestMapping("/api/medicines")
 @Profile("!render-nodb")
+@RequiredArgsConstructor
 public class MedicineController {
 
-    @Autowired
-    private MedicineRepository medicineRepository;
+    private static final Logger log = LoggerFactory.getLogger(MedicineController.class);
+
+    private final MedicineRepository medicineRepository;
 
     // 전체 조회 (optional: ?name=검색어)
     @GetMapping
     public List<Medicine> getAllMedicines(@RequestParam(required = false) String name) {
         if (name != null && !name.isEmpty()) {
-            // 이름 검색 기능 (필요 시 enable)
-            // return medicineRepository.findByNameContainingIgnoreCase(name);
-            return medicineRepository.findAll().stream()
-                    .filter(m -> m.getName().toLowerCase().contains(name.toLowerCase()))
-                    .toList();
+            return medicineRepository.findByNameContainingIgnoreCase(name);
         }
         return medicineRepository.findAll();
     }
@@ -46,8 +45,8 @@ public class MedicineController {
             return ResponseEntity.badRequest().body("파일이 없습니다.");
         }
 
-        try (InputStream is = file.getInputStream()) {
-            Workbook workbook = new XSSFWorkbook(is);
+        try (InputStream is = file.getInputStream();
+             Workbook workbook = new XSSFWorkbook(is)) {
             Sheet sheet = workbook.getSheetAt(0);
             List<Medicine> listToSave = new ArrayList<>();
 
@@ -113,12 +112,10 @@ public class MedicineController {
 
             // 한 번에 모두 저장 (insert or update)
             medicineRepository.saveAll(listToSave);
-
-            workbook.close();
             return ResponseEntity.ok("엑셀 업로드 및 저장/업데이트 성공 (" + listToSave.size() + "건 처리됨)");
         }
         catch (Exception e) {
-            e.printStackTrace();
+            log.error("엑셀 업로드 처리 실패", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("엑셀 처리 실패: " + e.getMessage());
         }

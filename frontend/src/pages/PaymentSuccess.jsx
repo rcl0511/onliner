@@ -13,6 +13,13 @@ export default function PaymentSuccess() {
     const paymentKey = searchParams.get('paymentKey');
     const orderId = searchParams.get('orderId');
     const amount = searchParams.get('amount');
+
+    if (!paymentKey || !orderId || !amount) {
+      setErrorMsg('결제 정보가 올바르지 않습니다. (paymentKey / orderId / amount 누락)');
+      setStatus('error');
+      return;
+    }
+
     const token = authStorage.getToken();
 
     fetch(`${API_BASE}/api/payments/confirm`, {
@@ -26,7 +33,7 @@ export default function PaymentSuccess() {
         setErrorMsg(err.message || '결제 승인에 실패했습니다.');
         setStatus('error');
       });
-  }, []);
+  }, [searchParams]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#F8FAFC' }}>
