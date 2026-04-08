@@ -51,7 +51,8 @@ public class VendorClientController {
     @PostMapping
     public ResponseEntity<?> createClient(@RequestBody VendorClient client) {
         try {
-            VendorClient saved = Objects.requireNonNull(clientRepo.save(client));
+            VendorClient requestClient = Objects.requireNonNull(client);
+            VendorClient saved = Objects.requireNonNull(clientRepo.save(requestClient));
             return ResponseEntity.ok(saved);
         } catch (Exception e) {
             return ResponseEntity.badRequest()

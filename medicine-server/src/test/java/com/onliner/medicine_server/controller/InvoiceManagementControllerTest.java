@@ -39,6 +39,7 @@ class InvoiceManagementControllerTest {
     private InvoiceRecordRepository invoiceRecordRepository;
 
     @Test
+    @SuppressWarnings("null")
     void disputeUpdateStoresStructuredAuditFields() throws Exception {
         InvoiceRecord existing = InvoiceRecord.builder()
                 .id("INV-TEST-001")
@@ -49,7 +50,7 @@ class InvoiceManagementControllerTest {
                 .build();
 
         when(invoiceRecordRepository.findById("INV-TEST-001")).thenReturn(Optional.of(existing));
-        when(invoiceRecordRepository.save(any(InvoiceRecord.class))).thenAnswer(invocation -> firstInvoiceRecordArgument(invocation));
+        when(invoiceRecordRepository.save(any(InvoiceRecord.class))).thenAnswer(this::savedInvoiceRecordAnswer);
 
         mockMvc.perform(put("/api/invoice-records/INV-TEST-001/status")
                         .with(Objects.requireNonNull(authentication(TestSecurityConfig.hospitalAuth("hospital-1"))))
@@ -68,7 +69,7 @@ class InvoiceManagementControllerTest {
 
         ArgumentCaptor<InvoiceRecord> captor = ArgumentCaptor.forClass(InvoiceRecord.class);
         verify(invoiceRecordRepository).save(captor.capture());
-        InvoiceRecord saved = Objects.requireNonNull(captor.getValue());
+        InvoiceRecord saved = capturedInvoiceRecord(captor);
 
         assertThat(saved.getStatus()).isEqualTo("DISPUTED");
         assertThat(saved.getProcessedByHospitalId()).isEqualTo("hospital-1");
@@ -125,5 +126,15 @@ class InvoiceManagementControllerTest {
 
     private InvoiceRecord firstInvoiceRecordArgument(org.mockito.invocation.InvocationOnMock invocation) {
         return Objects.requireNonNull(invocation.getArgument(0, InvoiceRecord.class));
+    }
+
+    private InvoiceRecord savedInvoiceRecordAnswer(org.mockito.invocation.InvocationOnMock invocation) {
+        InvoiceRecord record = firstInvoiceRecordArgument(invocation);
+        return Objects.requireNonNull(record);
+    }
+
+    private InvoiceRecord capturedInvoiceRecord(ArgumentCaptor<InvoiceRecord> captor) {
+        InvoiceRecord record = captor.getValue();
+        return Objects.requireNonNull(record);
     }
 }

@@ -50,9 +50,10 @@ class SignatureControllerTest {
     private SupabaseStorageService storageService;
 
     @Test
+    @SuppressWarnings("null")
     void saveSignatureFallsBackToDatabaseWhenStorageFails() throws Exception {
         when(signatureRepository.findByInvoiceId("INV-SIGN-001")).thenReturn(Optional.empty());
-        when(signatureRepository.save(any(Signature.class))).thenAnswer(invocation -> firstSignatureArgument(invocation));
+        when(signatureRepository.save(any(Signature.class))).thenAnswer(this::savedSignatureAnswer);
         when(storageService.uploadImage(any(byte[].class), anyString())).thenThrow(new RuntimeException("storage down"));
 
         String dataUrl = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jxioAAAAASUVORK5CYII=";
@@ -70,7 +71,7 @@ class SignatureControllerTest {
 
         ArgumentCaptor<Signature> captor = ArgumentCaptor.forClass(Signature.class);
         verify(signatureRepository).save(captor.capture());
-        Signature saved = Objects.requireNonNull(captor.getValue());
+        Signature saved = capturedSignature(captor);
 
         assertThat(saved.getHospitalId()).isEqualTo("hospital-9");
         assertThat(saved.getImageUrl()).isNull();
@@ -118,5 +119,15 @@ class SignatureControllerTest {
 
     private Signature firstSignatureArgument(org.mockito.invocation.InvocationOnMock invocation) {
         return Objects.requireNonNull(invocation.getArgument(0, Signature.class));
+    }
+
+    private Signature savedSignatureAnswer(org.mockito.invocation.InvocationOnMock invocation) {
+        Signature signature = firstSignatureArgument(invocation);
+        return Objects.requireNonNull(signature);
+    }
+
+    private Signature capturedSignature(ArgumentCaptor<Signature> captor) {
+        Signature signature = captor.getValue();
+        return Objects.requireNonNull(signature);
     }
 }

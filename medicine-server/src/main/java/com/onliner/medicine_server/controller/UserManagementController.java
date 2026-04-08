@@ -83,14 +83,13 @@ public class UserManagementController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 존재하는 이메일입니다.");
         }
 
-        User user = User.builder()
-                .identifier(email)
-                .password(passwordEncoder.encode(rawPassword))
-                .role("vendor")
-                .name(name)
-                .active(true)
-                .requiresPasswordChange(true)
-                .build();
+        User user = new User();
+        user.setIdentifier(email);
+        user.setPassword(passwordEncoder.encode(rawPassword));
+        user.setRole("vendor");
+        user.setName(name);
+        user.setActive(true);
+        user.setRequiresPasswordChange(true);
         User savedUser = Objects.requireNonNull(userRepository.save(user));
 
         VendorUser vendorUser = new VendorUser();

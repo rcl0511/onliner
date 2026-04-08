@@ -39,9 +39,6 @@ public class DashboardController {
     // 도매업체 대시보드 데이터
     @GetMapping("/vendor")
     public ResponseEntity<Map<String, Object>> vendorDashboard(Authentication auth) {
-        Claims claims = (Claims) auth.getDetails();
-        String companyCode = claims.get("companyCode", String.class);
-
         LocalDate today = LocalDate.now();
         LocalDate yesterday = today.minusDays(1);
 

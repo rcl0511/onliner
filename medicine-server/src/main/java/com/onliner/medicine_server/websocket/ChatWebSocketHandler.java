@@ -126,14 +126,13 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             String messageText = String.valueOf(data.getOrDefault("message", ""));
             String messageType = String.valueOf(data.getOrDefault("messageType", "text"));
 
-            ChatMessage entity = ChatMessage.builder()
-                    .roomId(roomId)
-                    .senderId(senderId)
-                    .senderName(senderName)
-                    .message(messageText)
-                    .messageType(messageType)
-                    .createdAt(LocalDateTime.now())
-                    .build();
+            ChatMessage entity = new ChatMessage();
+            entity.setRoomId(roomId);
+            entity.setSenderId(senderId);
+            entity.setSenderName(senderName);
+            entity.setMessage(messageText);
+            entity.setMessageType(messageType);
+            entity.setCreatedAt(LocalDateTime.now());
 
             ChatMessage saved = Objects.requireNonNull(repository.save(entity));
             // 저장된 ID를 data에 추가해서 브로드캐스트에 포함

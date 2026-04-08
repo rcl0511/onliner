@@ -49,7 +49,8 @@ public class SupabaseStorageService {
 
         HttpEntity<Void> entity = new HttpEntity<>(headers);
         try {
-            ResponseEntity<byte[]> response = restTemplate.exchange(downloadUrl, HttpMethod.GET, entity, byte[].class);
+            HttpMethod method = java.util.Objects.requireNonNull(HttpMethod.GET);
+            ResponseEntity<byte[]> response = restTemplate.exchange(downloadUrl, method, entity, byte[].class);
             if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
                 throw new RuntimeException("Supabase 다운로드 실패 (HTTP " + response.getStatusCode() + "): " + filename);
             }

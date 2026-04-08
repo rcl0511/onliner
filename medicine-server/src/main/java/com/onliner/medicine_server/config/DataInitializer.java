@@ -67,14 +67,13 @@ public class DataInitializer {
     ) {
         if (userRepository.existsByIdentifier(email)) return;
 
-        User user = User.builder()
-                .identifier(email)
-                .password(passwordEncoder.encode(rawPassword))
-                .role("vendor")
-                .name(name)
-                .active(true)
-                .requiresPasswordChange(false)
-                .build();
+        User user = new User();
+        user.setIdentifier(email);
+        user.setPassword(passwordEncoder.encode(rawPassword));
+        user.setRole("vendor");
+        user.setName(name);
+        user.setActive(true);
+        user.setRequiresPasswordChange(false);
         User savedUser = Objects.requireNonNull(userRepository.save(user));
 
         VendorUser vendorUser = new VendorUser();
@@ -94,14 +93,13 @@ public class DataInitializer {
     ) {
         if (userRepository.existsByIdentifier(phone)) return;
 
-        User user = User.builder()
-                .identifier(phone)
-                .password(passwordEncoder.encode(rawPassword))
-                .role("hospital")
-                .name(name)
-                .active(true)
-                .requiresPasswordChange(requiresPasswordChange)
-                .build();
+        User user = new User();
+        user.setIdentifier(phone);
+        user.setPassword(passwordEncoder.encode(rawPassword));
+        user.setRole("hospital");
+        user.setName(name);
+        user.setActive(true);
+        user.setRequiresPasswordChange(requiresPasswordChange);
         User savedUser = Objects.requireNonNull(userRepository.save(user));
 
         HospitalUser hospitalUser = new HospitalUser();

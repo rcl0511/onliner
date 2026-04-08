@@ -29,7 +29,8 @@ public class DeliveryServiceImpl implements DeliveryService {
 
     @Override
     public void assignPdfToDriver(String driverId, String pdfKey) {
-        Driver driver = driverRepository.findById(driverId)
+        String safeDriverId = Objects.requireNonNull(driverId);
+        Driver driver = driverRepository.findById(safeDriverId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 driverId: " + driverId));
 /*
         if (assignmentRepository.existsByPdfKey(pdfKey)) {

@@ -29,10 +29,12 @@ public class InvoiceController {
     public ResponseEntity<?> downloadPdf(@PathVariable String filename) {
         try {
             byte[] pdfBytes = storageService.downloadFile(filename);
+            MediaType pdfMediaType = Objects.requireNonNull(MediaType.APPLICATION_PDF);
+            ByteArrayResource resource = new ByteArrayResource(Objects.requireNonNull(pdfBytes));
             return ResponseEntity.ok()
-                    .contentType(MediaType.APPLICATION_PDF)
+                    .contentType(pdfMediaType)
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-                    .body(new ByteArrayResource(pdfBytes));
+                    .body(resource);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", "PDF 다운로드 실패", "detail", e.getMessage()));

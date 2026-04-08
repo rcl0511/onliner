@@ -4,6 +4,7 @@ import com.onliner.medicine_server.websocket.ChatWebSocketHandler;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.lang.NonNull;
+import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
@@ -27,7 +28,8 @@ public class WebSocketConfig implements WebSocketConfigurer {
         String[] originPatterns = new String[origins.length + 1];
         System.arraycopy(origins, 0, originPatterns, 0, origins.length);
         originPatterns[origins.length] = "https://*.netlify.app";
-        registry.addHandler(chatWebSocketHandler, "/ws/chat")
+        WebSocketHandler handler = java.util.Objects.requireNonNull(chatWebSocketHandler);
+        registry.addHandler(handler, "/ws/chat")
                 .setAllowedOriginPatterns(originPatterns);
     }
 }

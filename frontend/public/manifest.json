@@ -4,17 +4,17 @@
   "description": "병원용 명세서 확인 및 전자 서명 시스템",
   "icons": [
     {
-      "src": "favicon.ico",
+      "src": "favicon.ico?v=20260408",
       "sizes": "64x64 32x32 24x24 16x16",
       "type": "image/x-icon"
     },
     {
-      "src": "logo192.png",
+      "src": "logo192.png?v=20260408",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "logo512.png",
+      "src": "logo512.png?v=20260408",
       "type": "image/png",
       "sizes": "512x512"
     }
