@@ -16,6 +16,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @RestController
@@ -127,7 +128,7 @@ public class MedicineController {
             @RequestBody Medicine incoming) {
 
         // 3-1. 먼저 DB에서 해당 id가 있는지 조회
-        Optional<Medicine> optional = medicineRepository.findById(id);
+        Optional<Medicine> optional = medicineRepository.findById(Objects.requireNonNull(id));
         if (optional.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body("해당 ID의 약품을 찾을 수 없습니다. id=" + id);
@@ -159,7 +160,7 @@ public class MedicineController {
         // → 필요 없는 필드, 즉 수정할 의도가 없으면 해당 setter는 생략해도 됩니다.
 
         // 3-3. 저장
-        medicineRepository.save(exist);
+        medicineRepository.save(Objects.requireNonNull(exist));
 
         return ResponseEntity.ok(exist);
     }
@@ -167,7 +168,7 @@ public class MedicineController {
     // (선택) 4) 개별 조회: GET /api/medicines/{id}
     @GetMapping("/{id}")
     public ResponseEntity<?> getOneMedicine(@PathVariable Long id) {
-        Optional<Medicine> optional = medicineRepository.findById(id);
+        Optional<Medicine> optional = medicineRepository.findById(Objects.requireNonNull(id));
         if (optional.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body("해당 ID의 약품을 찾을 수 없습니다. id=" + id);

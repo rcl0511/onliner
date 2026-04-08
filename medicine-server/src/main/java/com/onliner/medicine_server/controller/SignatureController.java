@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 @RestController
@@ -47,10 +48,17 @@ public class SignatureController {
             // base64 디코딩
             String base64 = imageDataUrl.substring(imageDataUrl.indexOf(",") + 1);
             byte[] imageBytes = Base64.getDecoder().decode(base64);
+            String imageUrl = null;
+            String storedImageData = null;
 
-            // Supabase에 signatures/ 경로로 업로드
-            String filename = "signatures/" + invoiceId + "_" + System.currentTimeMillis() + ".png";
-            String imageUrl = storageService.uploadImage(imageBytes, filename);
+            try {
+                // 외부 스토리지가 구성된 경우 업로드를 우선 시도
+                String filename = "signatures/" + invoiceId + "_" + System.currentTimeMillis() + ".png";
+                imageUrl = storageService.uploadImage(imageBytes, filename);
+            } catch (Exception storageException) {
+                // 실서비스에서도 스토리지 장애로 사인 자체가 유실되면 안 되므로 DB fallback 저장
+                storedImageData = imageDataUrl;
+            }
 
             // 기존 서명이 있으면 업데이트, 없으면 새로 저장
             Signature signature = signatureRepository.findByInvoiceId(invoiceId)
@@ -60,14 +68,17 @@ public class SignatureController {
 
             signature.setHospitalId(hospitalId);
             signature.setImageUrl(imageUrl);
+            signature.setImageData(storedImageData);
             signature.setMetadata(metadata);
             signature.setSignedAt(Instant.now());
 
-            signatureRepository.save(signature);
+            signatureRepository.save(Objects.requireNonNull(signature));
 
             return ResponseEntity.ok(Map.of(
                     "message", "서명이 저장되었습니다.",
-                    "imageUrl", imageUrl,
+                    "imageUrl", imageUrl != null ? imageUrl : "",
+                    "imageDataUrl", storedImageData != null ? storedImageData : "",
+                    "storageType", imageUrl != null ? "supabase" : "database",
                     "invoiceId", invoiceId
             ));
         } catch (Exception e) {
@@ -90,6 +101,7 @@ public class SignatureController {
         return ResponseEntity.ok(Map.of(
                 "invoiceId", s.getInvoiceId(),
                 "imageUrl", s.getImageUrl() != null ? s.getImageUrl() : "",
+                "imageDataUrl", s.getImageData() != null ? s.getImageData() : "",
                 "metadata", s.getMetadata() != null ? s.getMetadata() : "{}",
                 "signedAt", s.getSignedAt() != null ? s.getSignedAt().toString() : ""
         ));

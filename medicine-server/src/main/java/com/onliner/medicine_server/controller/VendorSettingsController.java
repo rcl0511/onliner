@@ -18,6 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 @Profile("!render-nodb")
@@ -50,7 +51,7 @@ public class VendorSettingsController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "권한이 없습니다.");
         }
 
-        VendorSettings settings = vendorSettingsRepository.findById(companyCode)
+        VendorSettings settings = vendorSettingsRepository.findById(Objects.requireNonNull(companyCode))
                 .orElse(VendorSettings.builder().companyCode(companyCode).build());
         return ResponseEntity.ok(settings);
     }
@@ -79,7 +80,7 @@ public class VendorSettingsController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "MASTER 권한이 필요합니다.");
         }
 
-        VendorSettings settings = vendorSettingsRepository.findById(companyCode)
+        VendorSettings settings = vendorSettingsRepository.findById(Objects.requireNonNull(companyCode))
                 .orElse(VendorSettings.builder().companyCode(companyCode).build());
 
         if (companyName != null) settings.setCompanyName(companyName);
@@ -100,7 +101,7 @@ public class VendorSettingsController {
             settings.setSealPath("/uploads/" + filename);
         }
 
-        vendorSettingsRepository.save(settings);
+        vendorSettingsRepository.save(Objects.requireNonNull(settings));
         return ResponseEntity.ok(settings);
     }
 

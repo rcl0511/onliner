@@ -3,7 +3,6 @@ package com.onliner.medicine_server.controller;
 import com.onliner.medicine_server.entity.Driver;
 import com.onliner.medicine_server.entity.PdfAssignment;
 import com.onliner.medicine_server.service.DeliveryService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +16,6 @@ public class DeliveryController {
 
     private final DeliveryService deliveryService;
 
-    @Autowired
     public DeliveryController(DeliveryService deliveryService) {
         this.deliveryService = deliveryService;
     }

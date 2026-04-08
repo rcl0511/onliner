@@ -3,7 +3,10 @@
     "checkJs": false,
     "jsx": "react-jsx",
     "baseUrl": "src",
-    "ignoreDeprecations": "5.0"
+    "ignoreDeprecations": "6.0",
+    "paths": {
+      "*": ["*"]
+    }
   },
   "include": ["src"]
 }

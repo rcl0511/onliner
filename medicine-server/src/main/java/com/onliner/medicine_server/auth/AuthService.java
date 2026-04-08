@@ -6,27 +6,22 @@ import com.onliner.medicine_server.entity.VendorUser;
 import com.onliner.medicine_server.repository.HospitalUserRepository;
 import com.onliner.medicine_server.repository.UserRepository;
 import com.onliner.medicine_server.repository.VendorUserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.lang.Nullable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
+import java.util.Optional;
 
 @Service
+
 public class AuthService {
 
-    // render-nodb 프로파일에서는 null일 수 있음
-    @Nullable
-    private final UserRepository userRepository;
-    @Nullable
-    private final VendorUserRepository vendorUserRepository;
-    @Nullable
-    private final HospitalUserRepository hospitalUserRepository;
-    @Nullable
-    private final PasswordEncoder passwordEncoder;
+    private final Optional<UserRepository> userRepository;
+    private final Optional<VendorUserRepository> vendorUserRepository;
+    private final Optional<HospitalUserRepository> hospitalUserRepository;
+    private final Optional<PasswordEncoder> passwordEncoder;
 
     // DB 없는 환경을 위한 폴백 계정 (render-nodb 전용)
     private static final Map<String, String[]> FALLBACK_HOSPITAL = Map.of(
@@ -40,11 +35,10 @@ public class AuthService {
             )
     );
 
-    @Autowired
-    public AuthService(@Nullable UserRepository userRepository,
-                       @Nullable VendorUserRepository vendorUserRepository,
-                       @Nullable HospitalUserRepository hospitalUserRepository,
-                       @Nullable PasswordEncoder passwordEncoder) {
+    public AuthService(Optional<UserRepository> userRepository,
+                       Optional<VendorUserRepository> vendorUserRepository,
+                       Optional<HospitalUserRepository> hospitalUserRepository,
+                       Optional<PasswordEncoder> passwordEncoder) {
         this.userRepository = userRepository;
         this.vendorUserRepository = vendorUserRepository;
         this.hospitalUserRepository = hospitalUserRepository;
@@ -57,7 +51,7 @@ public class AuthService {
         }
         String role = request.role().trim().toLowerCase();
         // DB 사용 불가 시 폴백 로그인
-        if (userRepository == null) {
+        if (userRepository.isEmpty()) {
             return switch (role) {
                 case "hospital" -> loginHospitalFallback(request, jwtService);
                 case "vendor" -> loginVendorFallback(request, jwtService);
@@ -104,19 +98,19 @@ public class AuthService {
         if (request.phone() == null || request.password() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "phone/password required");
         }
-        if (userRepository == null || passwordEncoder == null || hospitalUserRepository == null) {
+        if (userRepository.isEmpty() || passwordEncoder.isEmpty() || hospitalUserRepository.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "DB 연결 없음");
         }
 
-        User user = userRepository.findByIdentifier(request.phone())
+        User user = userRepository.orElseThrow().findByIdentifier(request.phone())
                 .filter(u -> "hospital".equals(u.getRole()) && u.isActive())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "전화번호 또는 비밀번호가 잘못되었습니다."));
 
-        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
+        if (!passwordEncoder.orElseThrow().matches(request.password(), user.getPassword())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "전화번호 또는 비밀번호가 잘못되었습니다.");
         }
 
-        HospitalUser hospitalUser = hospitalUserRepository.findByUser(user)
+        HospitalUser hospitalUser = hospitalUserRepository.orElseThrow().findByUser(user)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "병원 정보를 찾을 수 없습니다."));
 
         UserInfo userInfo = new UserInfo(
@@ -139,20 +133,20 @@ public class AuthService {
         if (request.companyCode() == null || request.email() == null || request.password() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "companyCode/email/password required");
         }
-        if (userRepository == null || passwordEncoder == null || vendorUserRepository == null) {
+        if (userRepository.isEmpty() || passwordEncoder.isEmpty() || vendorUserRepository.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "DB 연결 없음");
         }
 
         String email = request.email().trim();
-        User user = userRepository.findByIdentifier(email)
+        User user = userRepository.orElseThrow().findByIdentifier(email)
                 .filter(u -> "vendor".equals(u.getRole()) && u.isActive())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "아이디 또는 비밀번호가 잘못되었습니다."));
 
-        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
+        if (!passwordEncoder.orElseThrow().matches(request.password(), user.getPassword())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "아이디 또는 비밀번호가 잘못되었습니다.");
         }
 
-        VendorUser vendorUser = vendorUserRepository.findByUser(user)
+        VendorUser vendorUser = vendorUserRepository.orElseThrow().findByUser(user)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "업체 정보를 찾을 수 없습니다."));
 
         String code = request.companyCode().trim().toLowerCase();
@@ -174,5 +168,30 @@ public class AuthService {
         );
         String token = jwtService.generateToken(userInfo);
         return new LoginResponse(token, userInfo);
+    }
+
+    public void changeOwnPassword(String currentUserIdentifier, String currentPassword, String newPassword) {
+        if (userRepository.isEmpty() || passwordEncoder.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "DB 연결 없음");
+        }
+        if (currentPassword == null || newPassword == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "currentPassword, newPassword 필수입니다.");
+        }
+        if (newPassword.length() < 6) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "비밀번호는 6자 이상이어야 합니다.");
+        }
+
+        UserRepository users = userRepository.orElseThrow();
+        PasswordEncoder encoder = passwordEncoder.orElseThrow();
+        User user = users.findByIdentifier(currentUserIdentifier)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
+
+        if (!encoder.matches(currentPassword, user.getPassword())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "현재 비밀번호가 잘못되었습니다.");
+        }
+
+        user.setPassword(encoder.encode(newPassword));
+        user.setRequiresPasswordChange(false);
+        users.save(java.util.Objects.requireNonNull(user));
     }
 }

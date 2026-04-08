@@ -6,7 +6,6 @@ import com.onliner.medicine_server.repository.VendorClientRepository;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.usermodel.DateUtil;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -17,6 +16,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
+import java.util.Objects;
 import org.springframework.context.annotation.Profile;
 
 @RestController
@@ -24,8 +24,11 @@ import org.springframework.context.annotation.Profile;
 @Profile("!render-nodb")
 public class VendorClientController {
 
-    @Autowired
-    private VendorClientRepository clientRepo;
+    private final VendorClientRepository clientRepo;
+
+    public VendorClientController(VendorClientRepository clientRepo) {
+        this.clientRepo = clientRepo;
+    }
 
     // 1) 전체 조회 (옵션: ?q=검색어)
     @GetMapping
@@ -48,7 +51,7 @@ public class VendorClientController {
     @PostMapping
     public ResponseEntity<?> createClient(@RequestBody VendorClient client) {
         try {
-            VendorClient saved = clientRepo.save(client);
+            VendorClient saved = Objects.requireNonNull(clientRepo.save(client));
             return ResponseEntity.ok(saved);
         } catch (Exception e) {
             return ResponseEntity.badRequest()
@@ -62,7 +65,7 @@ public class VendorClientController {
             @PathVariable Long id,
             @RequestBody VendorClient incoming) {
 
-        Optional<VendorClient> opt = clientRepo.findById(id);
+        Optional<VendorClient> opt = clientRepo.findById(Objects.requireNonNull(id));
         if (opt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
@@ -111,7 +114,7 @@ public class VendorClientController {
         exist.setExternalExclude(incoming.getExternalExclude());
         exist.setPrePayment(incoming.getPrePayment());
 
-        clientRepo.save(exist);
+        clientRepo.save(Objects.requireNonNull(exist));
         return ResponseEntity.ok(exist);
     }
 

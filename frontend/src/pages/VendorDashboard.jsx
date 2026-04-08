@@ -14,7 +14,6 @@ const VendorDashboard = () => {
     const [unconfirmedInvoices, setUnconfirmedInvoices] = useState(0);
 
     useEffect(() => {
-        const user = authStorage.getUser();
         const token = authStorage.getToken();
 
         const loadRecentOrders = async () => {

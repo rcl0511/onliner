@@ -124,7 +124,12 @@ class SignatureService {
         const data = await res.json();
         let metadata = {};
         try { metadata = JSON.parse(data.metadata || '{}'); } catch {}
-        return { signatureData: null, imageUrl: data.imageUrl, metadata, signedAt: data.signedAt };
+        return {
+          signatureData: data.imageDataUrl || null,
+          imageUrl: data.imageUrl || data.imageDataUrl || null,
+          metadata,
+          signedAt: data.signedAt,
+        };
       }
     } catch {}
 

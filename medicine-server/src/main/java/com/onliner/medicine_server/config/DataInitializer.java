@@ -75,15 +75,14 @@ public class DataInitializer {
                 .active(true)
                 .requiresPasswordChange(false)
                 .build();
-        userRepository.save(user);
+        User savedUser = Objects.requireNonNull(userRepository.save(user));
 
-        VendorUser vendorUser = VendorUser.builder()
-                .user(Objects.requireNonNull(user))
-                .companyCode(companyCode)
-                .companyName(companyName)
-                .permission(permission)
-                .build();
-        vendorUserRepository.save(vendorUser);
+        VendorUser vendorUser = new VendorUser();
+        vendorUser.setUser(savedUser);
+        vendorUser.setCompanyCode(companyCode);
+        vendorUser.setCompanyName(companyName);
+        vendorUser.setPermission(permission);
+        vendorUserRepository.save(Objects.requireNonNull(vendorUser));
     }
 
     private void createHospitalUser(
@@ -103,13 +102,12 @@ public class DataInitializer {
                 .active(true)
                 .requiresPasswordChange(requiresPasswordChange)
                 .build();
-        userRepository.save(user);
+        User savedUser = Objects.requireNonNull(userRepository.save(user));
 
-        HospitalUser hospitalUser = HospitalUser.builder()
-                .user(user)
-                .hospitalName(hospitalName)
-                .hospitalId(hospitalId)
-                .build();
-        hospitalUserRepository.save(hospitalUser);
+        HospitalUser hospitalUser = new HospitalUser();
+        hospitalUser.setUser(savedUser);
+        hospitalUser.setHospitalName(hospitalName);
+        hospitalUser.setHospitalId(hospitalId);
+        hospitalUserRepository.save(Objects.requireNonNull(hospitalUser));
     }
 }

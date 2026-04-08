@@ -1,30 +1,46 @@
 import React, { useState, useEffect, useMemo } from "react";
+import API_BASE from "../api/baseUrl";
+import authFetch from "../api/authFetch";
+import { fetchVendorInvoices } from "../services/invoiceRecordService";
 import '../css/common.css';
 
 export default function VendorInvoiceSave() {
   const [invoices, setInvoices] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [dateFilter, setDateFilter] = useState({
     startDate: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().slice(0, 10),
     endDate: new Date().toISOString().slice(0, 10)
   });
 
   useEffect(() => {
-    const mockInvoices = [
-      { id: 1, invoiceNumber: 'INV-2406-001', customer: '테스트병원A', date: '2024-06-18', amount: 4500000, status: 'CONFIRMED' },
-      { id: 2, invoiceNumber: 'INV-2406-002', customer: '테스트병원B', date: '2024-06-17', amount: 1200000, status: 'PENDING' },
-      { id: 3, invoiceNumber: 'INV-2406-003', customer: '테스트병원C', date: '2024-06-15', amount: 8900000, status: 'CONFIRMED' },
-      { id: 4, invoiceNumber: 'INV-2406-004', customer: '테스트병원D', date: '2024-06-14', amount: 3200000, status: 'CONFIRMED' },
-      { id: 5, invoiceNumber: 'INV-2406-005', customer: '테스트병원E', date: '2024-06-13', amount: 2100000, status: 'PENDING' },
-    ];
-    setInvoices(mockInvoices);
+    const loadInvoices = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const data = await fetchVendorInvoices();
+        setInvoices(data);
+      } catch (err) {
+        setError(err.message || '명세서 목록을 불러오지 못했습니다.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadInvoices();
   }, []);
 
   const filteredInvoices = useMemo(() => {
     return invoices.filter(inv => {
-      const matchesStatus = statusFilter === 'ALL' || inv.status === statusFilter;
-      const matchesSearch = inv.invoiceNumber.includes(searchQuery) || inv.customer.includes(searchQuery);
+      const normalizedStatus = (inv.status || '').toUpperCase();
+      const matchesStatus = statusFilter === 'ALL' || normalizedStatus === statusFilter;
+      const customerName = inv.hospitalName || inv.customer || '';
+      const invoiceNumber = inv.invoiceNumber || inv.id || '';
+      const matchesSearch =
+        invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        customerName.toLowerCase().includes(searchQuery.toLowerCase());
       const invDate = new Date(inv.date);
       const start = new Date(dateFilter.startDate);
       const end = new Date(dateFilter.endDate);
@@ -33,6 +49,31 @@ export default function VendorInvoiceSave() {
       return matchesStatus && matchesSearch && matchesDate;
     });
   }, [invoices, statusFilter, searchQuery, dateFilter]);
+
+  const handleDownloadPdf = async (pdfUrl, fileName) => {
+    if (!pdfUrl) {
+      return;
+    }
+
+    try {
+      const requestUrl = pdfUrl.startsWith('http') ? pdfUrl : `${API_BASE}${pdfUrl}`;
+      const res = await authFetch(requestUrl);
+      if (!res.ok) {
+        throw new Error((await res.text()) || 'PDF 다운로드에 실패했습니다.');
+      }
+      const blob = await res.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = fileName || 'invoice.pdf';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(objectUrl);
+    } catch (err) {
+      alert(err.message || 'PDF 다운로드에 실패했습니다.');
+    }
+  };
 
   return (
     <div style={{ background: 'white', padding: '32px', minHeight: 'calc(100vh - 48px)' }}>
@@ -70,7 +111,8 @@ export default function VendorInvoiceSave() {
             >
               <option value="ALL">전체 상태</option>
               <option value="CONFIRMED">확인완료</option>
-              <option value="PENDING">대기중</option>
+              <option value="SENT">대기중</option>
+              <option value="DISPUTED">이의신청</option>
             </select>
           </div>
           <div>
@@ -99,7 +141,19 @@ export default function VendorInvoiceSave() {
             </tr>
           </thead>
           <tbody>
-            {filteredInvoices.length === 0 ? (
+            {loading ? (
+              <tr>
+                <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: '#94A3B8' }}>
+                  명세서를 불러오는 중입니다.
+                </td>
+              </tr>
+            ) : error ? (
+              <tr>
+                <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: '#EF4444' }}>
+                  {error}
+                </td>
+              </tr>
+            ) : filteredInvoices.length === 0 ? (
               <tr>
                 <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: '#94A3B8' }}>
                   조회된 명세서가 없습니다.
@@ -108,24 +162,35 @@ export default function VendorInvoiceSave() {
             ) : (
               filteredInvoices.map((inv) => (
                 <tr key={inv.id}>
-                  <td style={{ fontWeight: 700, color: '#1E293B' }}>{inv.invoiceNumber}</td>
-                  <td>{inv.customer}</td>
-                  <td style={{ color: '#64748B' }}>{inv.date}</td>
-                  <td style={{ fontWeight: 600, color: '#1E293B' }}>{inv.amount.toLocaleString()}원</td>
+                  <td style={{ fontWeight: 700, color: '#1E293B' }}>{inv.invoiceNumber || inv.id}</td>
+                  <td>{inv.hospitalName || '-'}</td>
+                  <td style={{ color: '#64748B' }}>{new Date(inv.date).toISOString().slice(0, 10)}</td>
+                  <td style={{ fontWeight: 600, color: '#1E293B' }}>{Number(inv.totalAmount || 0).toLocaleString()}원</td>
                   <td>
                     <span style={{
                       padding: '6px 12px',
                       borderRadius: '8px',
                       fontSize: '12px',
                       fontWeight: 700,
-                      background: inv.status === 'CONFIRMED' ? '#EEF2FF' : '#F8FAFC',
-                      color: inv.status === 'CONFIRMED' ? '#475BE8' : '#94A3B8'
+                      background:
+                        inv.status === 'confirmed' ? '#EEF2FF' :
+                        inv.status === 'disputed' ? '#FEF2F2' : '#F8FAFC',
+                      color:
+                        inv.status === 'confirmed' ? '#475BE8' :
+                        inv.status === 'disputed' ? '#DC2626' : '#94A3B8'
                     }}>
-                      {inv.status === 'CONFIRMED' ? '확인완료' : '대기중'}
+                      {inv.status === 'confirmed' ? '확인완료' : inv.status === 'disputed' ? '이의신청' : '대기중'}
                     </span>
                   </td>
                   <td>
-                    <button className="btn-outline" style={{ fontSize: '12px', padding: '6px 12px' }}>PDF 열기</button>
+                    <button
+                      className="btn-outline"
+                      style={{ fontSize: '12px', padding: '6px 12px' }}
+                      onClick={() => handleDownloadPdf(inv.pdfUrl, `${inv.invoiceNumber || inv.id}.pdf`)}
+                      disabled={!inv.pdfUrl}
+                    >
+                      PDF 열기
+                    </button>
                   </td>
                 </tr>
               ))

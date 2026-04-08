@@ -4,9 +4,9 @@ import com.onliner.medicine_server.entity.Driver;
 import com.onliner.medicine_server.entity.PdfAssignment;
 import com.onliner.medicine_server.repository.DriverRepository;
 import com.onliner.medicine_server.repository.PdfAssignmentRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
+import java.util.Objects;
 import java.util.List;
 
 @Service
@@ -16,7 +16,6 @@ public class DeliveryServiceImpl implements DeliveryService {
     private final DriverRepository driverRepository;
     private final PdfAssignmentRepository assignmentRepository;
 
-    @Autowired
     public DeliveryServiceImpl(DriverRepository driverRepository,
                                PdfAssignmentRepository assignmentRepository) {
         this.driverRepository = driverRepository;
@@ -39,7 +38,7 @@ public class DeliveryServiceImpl implements DeliveryService {
 */
 
         PdfAssignment pa = new PdfAssignment(driver.getId(), pdfKey);
-        assignmentRepository.save(pa);
+        assignmentRepository.save(Objects.requireNonNull(pa));
     }
 
     @Override

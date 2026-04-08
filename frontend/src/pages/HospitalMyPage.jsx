@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import '../css/HospitalMyPage.css';
+import API_BASE from "../api/baseUrl";
 import authStorage from "../services/authStorage";
+import authFetch from "../api/authFetch";
+import { fetchHospitalInvoices } from "../services/invoiceRecordService";
 
 const HospitalMyPage = () => {
   const navigate = useNavigate();
@@ -13,51 +16,26 @@ const HospitalMyPage = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState('');
 
   useEffect(() => {
-    // 사용자 정보 로드
     const userInfo = authStorage.getUser();
     setUser(userInfo);
-
-    // 거래 이력 로드 (실제로는 API 호출)
+    const loadHistory = async () => {
+      setHistoryLoading(true);
+      setHistoryError('');
+      try {
+        const invoices = await fetchHospitalInvoices();
+        setHistory(invoices);
+      } catch (err) {
+        setHistoryError(err.message || '거래 이력을 불러오지 못했습니다.');
+      } finally {
+        setHistoryLoading(false);
+      }
+    };
     loadHistory();
   }, []);
-
-  const loadHistory = () => {
-    // 임시 데이터
-    const mockHistory = [
-      {
-        id: 'INV-2024-001',
-        vendorName: 'DH약품',
-        date: '2024-01-15',
-        amount: 1250000,
-        status: 'confirmed'
-      },
-      {
-        id: 'INV-2024-002',
-        vendorName: '서울제약',
-        date: '2024-01-14',
-        amount: 980000,
-        status: 'confirmed'
-      },
-      {
-        id: 'INV-2024-003',
-        vendorName: 'DH약품',
-        date: '2024-01-13',
-        amount: 2100000,
-        status: 'confirmed'
-      },
-      {
-        id: 'INV-2024-004',
-        vendorName: '대한제약',
-        date: '2024-01-12',
-        amount: 750000,
-        status: 'disputed'
-      },
-    ];
-
-    setHistory(mockHistory);
-  };
 
   const handlePasswordChange = (e) => {
     e.preventDefault();
@@ -73,19 +51,24 @@ const HospitalMyPage = () => {
       return;
     }
 
-    // 비밀번호 변경 처리 (실제로는 API 호출)
-    const savedPassword = localStorage.getItem('hospitalPassword') || 'temp1234';
-    if (currentPassword !== savedPassword) {
-      setPasswordError('현재 비밀번호가 일치하지 않습니다.');
-      return;
-    }
-
-    localStorage.setItem('hospitalPassword', newPassword);
-    alert('비밀번호가 변경되었습니다.');
-    setShowPasswordChange(false);
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
+    authFetch(`${API_BASE}/api/auth/password`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          throw new Error((await res.text()) || '비밀번호 변경에 실패했습니다.');
+        }
+        alert('비밀번호가 변경되었습니다.');
+        setShowPasswordChange(false);
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      })
+      .catch((err) => {
+        setPasswordError(err.message || '비밀번호 변경에 실패했습니다.');
+      });
   };
 
   const handleHistoryClick = (invoiceId) => {
@@ -100,20 +83,20 @@ const HospitalMyPage = () => {
         {/* 사용자 정보 */}
         <div className="mypage-section">
           <h2>사용자 정보</h2>
-          <div className="user-info-card">
-            <div className="user-info-item">
-              <span className="info-label">병원명</span>
-              <span className="info-value">{user?.hospitalName || '서울대학교병원'}</span>
+            <div className="user-info-card">
+              <div className="user-info-item">
+                <span className="info-label">병원명</span>
+                <span className="info-value">{user?.hospitalName || '-'}</span>
+              </div>
+              <div className="user-info-item">
+                <span className="info-label">전화번호</span>
+                <span className="info-value">{user?.phone || '-'}</span>
+              </div>
+              <div className="user-info-item">
+                <span className="info-label">이메일</span>
+                <span className="info-value">{user?.email || '-'}</span>
+              </div>
             </div>
-            <div className="user-info-item">
-              <span className="info-label">전화번호</span>
-              <span className="info-value">{user?.phone || '010-1234-5678'}</span>
-            </div>
-            <div className="user-info-item">
-              <span className="info-label">이메일</span>
-              <span className="info-value">{user?.email || 'hospital@example.com'}</span>
-            </div>
-          </div>
         </div>
 
         {/* 비밀번호 변경 */}
@@ -185,7 +168,15 @@ const HospitalMyPage = () => {
         <div className="mypage-section">
           <h2>과거 거래 이력</h2>
           <div className="history-list">
-            {history.length === 0 ? (
+            {historyLoading ? (
+              <div className="empty-state">
+                <p>거래 이력을 불러오는 중입니다.</p>
+              </div>
+            ) : historyError ? (
+              <div className="empty-state">
+                <p>{historyError}</p>
+              </div>
+            ) : history.length === 0 ? (
               <div className="empty-state">
                 <p>거래 이력이 없습니다.</p>
               </div>
@@ -207,10 +198,10 @@ const HospitalMyPage = () => {
                       <td>{item.id}</td>
                       <td>{item.vendorName}</td>
                       <td>{format(new Date(item.date), 'yyyy-MM-dd')}</td>
-                      <td>{item.amount.toLocaleString()}원</td>
+                      <td>{Number(item.totalAmount || item.total || 0).toLocaleString()}원</td>
                       <td>
                         <span className={`status-badge status-${item.status}`}>
-                          {item.status === 'confirmed' ? '확인완료' : '이의신청'}
+                          {item.status === 'confirmed' ? '확인완료' : item.status === 'disputed' ? '이의신청' : '미확인'}
                         </span>
                       </td>
                       <td>

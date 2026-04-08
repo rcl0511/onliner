@@ -64,13 +64,6 @@ const SignaturePad = ({ onSave, savedSignature }) => {
     ctx.lineTo(x, y);
     ctx.stroke();
     setHasSignature(true);
-    
-    // 서명을 그리면 자동으로 저장
-    const canvas = canvasRef.current;
-    const signatureData = canvas.toDataURL('image/png');
-    if (onSave) {
-      onSave(signatureData);
-    }
   };
 
   const stopDrawing = (e) => {
@@ -86,6 +79,10 @@ const SignaturePad = ({ onSave, savedSignature }) => {
   };
 
   const save = () => {
+    if (!hasSignature) {
+      return;
+    }
+
     const canvas = canvasRef.current;
     const signatureData = canvas.toDataURL('image/png');
     

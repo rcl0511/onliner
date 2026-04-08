@@ -7,6 +7,7 @@ import com.onliner.medicine_server.auth.JwtService;
 import com.onliner.medicine_server.entity.ChatMessage;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
@@ -24,6 +25,8 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -36,12 +39,11 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final Map<WebSocketSession, Set<String>> sessionRooms = new ConcurrentHashMap<>();
     private final JwtService jwtService;
 
-    @Nullable
-    private final ChatMessageRepository chatMessageRepository;
+    private final Optional<ChatMessageRepository> chatMessageRepository;
 
-    public ChatWebSocketHandler(JwtService jwtService, @Nullable ChatMessageRepository chatMessageRepository) {
+    public ChatWebSocketHandler(JwtService jwtService, ObjectProvider<ChatMessageRepository> chatMessageRepositoryProvider) {
         this.jwtService = jwtService;
-        this.chatMessageRepository = chatMessageRepository;
+        this.chatMessageRepository = Optional.ofNullable(chatMessageRepositoryProvider.getIfAvailable());
     }
 
     @Override
@@ -116,7 +118,9 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     }
 
     private void saveToDb(String roomId, String senderId, Map<String, Object> data) {
-        if (chatMessageRepository == null) return;
+        if (chatMessageRepository.isEmpty()) return;
+
+        ChatMessageRepository repository = chatMessageRepository.get();
         try {
             String senderName = String.valueOf(data.getOrDefault("senderName", senderId));
             String messageText = String.valueOf(data.getOrDefault("message", ""));
@@ -131,7 +135,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                     .createdAt(LocalDateTime.now())
                     .build();
 
-            ChatMessage saved = chatMessageRepository.save(entity);
+            ChatMessage saved = Objects.requireNonNull(repository.save(entity));
             // 저장된 ID를 data에 추가해서 브로드캐스트에 포함
             data.put("dbId", saved.getId());
         } catch (Exception e) {
@@ -169,7 +173,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         sessionRooms.getOrDefault(session, Collections.emptySet()).remove(roomId);
     }
 
-    private String getQueryParam(URI uri, String key) {
+    @Nullable
+    private String getQueryParam(@Nullable URI uri, String key) {
         if (uri == null || uri.getQuery() == null) return null;
         String[] pairs = uri.getQuery().split("&");
         for (String pair : pairs) {

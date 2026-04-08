@@ -6,6 +6,7 @@ import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.Nullable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -57,7 +59,7 @@ public class OrderController {
                 .createdAt(Instant.now())
                 .build();
 
-        orderRepository.save(order);
+        orderRepository.save(Objects.requireNonNull(order));
         return ResponseEntity.ok(Map.of("message", "주문이 접수되었습니다.", "orderId", id));
     }
 
@@ -96,7 +98,7 @@ public class OrderController {
             return ResponseEntity.badRequest().body(Map.of("error", "status는 ACCEPTED 또는 REJECTED여야 합니다."));
         }
 
-        Optional<Order> opt = orderRepository.findById(id);
+        Optional<Order> opt = orderRepository.findById(Objects.requireNonNull(id));
         if (opt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "주문을 찾을 수 없습니다."));
         }
@@ -106,10 +108,11 @@ public class OrderController {
             return ResponseEntity.badRequest().body(Map.of("error", "이미 처리된 주문입니다. (현재 상태: " + order.getStatus() + ")"));
         }
         order.setStatus(newStatus);
-        orderRepository.save(order);
+        orderRepository.save(Objects.requireNonNull(order));
         return ResponseEntity.ok(Map.of("message", "상태가 변경되었습니다.", "status", newStatus));
     }
 
+    @Nullable
     private Claims extractClaims() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getDetails() instanceof Claims claims) {

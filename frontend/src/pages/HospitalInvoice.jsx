@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import SignaturePad from '../components/SignaturePad';
 import signatureService from '../services/signatureService';
+import API_BASE from '../api/baseUrl';
+import authFetch from '../api/authFetch';
+import { fetchInvoiceDetail, updateInvoiceStatus } from '../services/invoiceRecordService';
 import '../css/HospitalInvoice.css';
 
 const HospitalInvoice = () => {
   const { invoiceId } = useParams();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const [invoice, setInvoice] = useState(null);
   const [signature, setSignature] = useState(null);
   const [signatureMetadata, setSignatureMetadata] = useState(null);
@@ -18,64 +20,25 @@ const HospitalInvoice = () => {
   const [showSignatureInfo, setShowSignatureInfo] = useState(false);
   const [signatureSaving, setSignatureSaving] = useState(false);
   const [signatureError, setSignatureError] = useState('');
+  const [invoiceError, setInvoiceError] = useState('');
 
   const loadInvoice = useCallback(() => {
-    // 임시 데이터
-    const mockInvoice = {
-      id: invoiceId || 'INV-2024-001',
-      vendorName: 'DH약품',
-      vendorCode: 'dh-pharm',
-      vendorAddress: '서울시 강남구 테헤란로 123',
-      vendorPhone: '02-1234-5678',
-      hospitalName: '서울대학교병원',
-      hospitalAddress: '서울시 종로구 대학로 101',
-      date: '2024-01-15',
-      items: [
-        { name: '타이레놀 500mg', quantity: 100, unit: '정', unitPrice: 50, total: 5000 },
-        { name: '아스피린 100mg', quantity: 200, unit: '정', unitPrice: 30, total: 6000 },
-        { name: '게보린정', quantity: 50, unit: '정', unitPrice: 80, total: 4000 },
-        { name: '판콜에이내복액', quantity: 30, unit: '병', unitPrice: 2000, total: 60000 },
-        { name: '베아제정', quantity: 20, unit: '정', unitPrice: 150, total: 3000 },
-      ],
-      subtotal: 78000,
-      tax: 7800,
-      total: 85800,
-      status: 'unread',
-      version: 1,
-      parentInvoiceId: null,
-      revisionHistory: [] // 수정 명세서 히스토리
-    };
-
-    // 수정 명세서인 경우 히스토리 로드
-    if (invoiceId === 'INV-2024-004-v2') {
-      mockInvoice.parentInvoiceId = 'INV-2024-004';
-      mockInvoice.version = 2;
-      mockInvoice.revisionHistory = [
-        {
-          version: 1,
-          invoiceId: 'INV-2024-004',
-          date: '2024-01-12',
-          status: 'disputed',
-          disputeReason: '수량 부족'
-        }
-      ];
+    if (!invoiceId) {
+      return;
     }
 
-    setInvoice(mockInvoice);
+    setInvoiceError('');
+    fetchInvoiceDetail(invoiceId)
+      .then((data) => setInvoice(data))
+      .catch((err) => {
+        setInvoiceError(err.message || '명세서 정보를 불러오지 못했습니다.');
+        setInvoice(null);
+      });
   }, [invoiceId]);
 
-  // 1회성 링크 처리 (토큰 기반 접속)
   useEffect(() => {
-    const token = searchParams.get('token');
-    if (token) {
-      // 토큰 검증 (실제로는 서버에서 검증)
-      // 24시간 유효성 체크
-      console.log('1회성 링크로 접속:', token);
-    }
-
-    // 명세서 데이터 로드 (실제로는 API 호출)
     loadInvoice();
-  }, [searchParams, loadInvoice]);
+  }, [loadInvoice]);
 
   // 명세서 로드 후 서명 불러오기 (DB 우선, 없으면 캐시)
   useEffect(() => {
@@ -108,25 +71,13 @@ const HospitalInvoice = () => {
       return;
     }
 
-    // 서명 메타데이터와 함께 확인 완료 처리 (실제로는 API 호출)
-    const confirmData = {
-      invoiceId,
-      signature: signature,
-      metadata: signatureMetadata,
-      confirmedAt: new Date().toISOString(),
-    };
-
-    console.log('명세서 확인 완료:', confirmData);
-    
-    // 실제로는 서버 API 호출
-    // await fetch('/api/invoices/confirm', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(confirmData)
-    // });
-
-    alert('명세서가 확인되었습니다.');
-    navigate('/hospital/inbox');
+    try {
+      await updateInvoiceStatus(invoiceId, 'confirmed');
+      alert('명세서가 확인되었습니다.');
+      navigate('/hospital/inbox');
+    } catch (err) {
+      alert(err.message || '명세서 확인 처리에 실패했습니다.');
+    }
   };
 
   const handleDispute = async () => {
@@ -142,33 +93,56 @@ const HospitalInvoice = () => {
       setSignatureMetadata(null);
     }
 
-    // 이의 신청 처리 (실제로는 API 호출)
-    const disputeData = {
-      invoiceId,
-      disputeType,
-      disputeMemo,
-      requestedAt: new Date().toISOString(),
-      userId: signatureService.getUserId(),
-    };
-
-    console.log('이의 신청:', disputeData);
-    
-    // 실제로는 서버 API 호출
-    // await fetch('/api/invoices/dispute', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(disputeData)
-    // });
-
-    alert('이의 신청이 접수되었습니다. 도매업체에서 확인 후 수정 명세서를 발행합니다.');
-    setShowDisputeModal(false);
-    navigate('/hospital/inbox');
+    try {
+      await updateInvoiceStatus(invoiceId, 'disputed', {
+        note: `[${disputeType}] ${disputeMemo}`,
+        disputeType,
+        disputeMemo,
+      });
+      alert('이의 신청이 접수되었습니다. 도매업체에서 확인 후 수정 명세서를 발행합니다.');
+      setShowDisputeModal(false);
+      navigate('/hospital/inbox');
+    } catch (err) {
+      alert(err.message || '이의 신청 처리에 실패했습니다.');
+    }
   };
 
   const handleDownloadPDF = () => {
-    // PDF 다운로드 (실제로는 서버에서 PDF 생성)
-    alert('PDF 다운로드 기능은 준비 중입니다.');
+    if (!invoice?.pdfUrl) {
+      alert('다운로드 가능한 PDF가 없습니다.');
+      return;
+    }
+
+    const requestUrl = invoice.pdfUrl.startsWith('http')
+      ? invoice.pdfUrl
+      : `${API_BASE}${invoice.pdfUrl}`;
+    const fileName = invoice.pdfUrl.split('/').pop() || `${invoice.id}.pdf`;
+
+    authFetch(requestUrl)
+      .then(async (res) => {
+        if (!res.ok) {
+          throw new Error((await res.text()) || 'PDF 다운로드에 실패했습니다.');
+        }
+        return res.blob();
+      })
+      .then((blob) => {
+        const objectUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(objectUrl);
+      })
+      .catch((err) => {
+        alert(err.message || 'PDF 다운로드에 실패했습니다.');
+      });
   };
+
+  if (invoiceError) {
+    return <div className="invoice-loading">{invoiceError}</div>;
+  }
 
   if (!invoice) {
     return <div className="invoice-loading">로딩 중...</div>;
@@ -208,13 +182,13 @@ const HospitalInvoice = () => {
                 <div className="invoice-party">
                   <h3>공급자</h3>
                   <p className="party-name">{invoice.vendorName}</p>
-                  <p className="party-info">{invoice.vendorAddress}</p>
-                  <p className="party-info">TEL: {invoice.vendorPhone}</p>
+                  <p className="party-info">{invoice.vendorAddress || '-'}</p>
+                  <p className="party-info">TEL: {invoice.vendorPhone || '-'}</p>
                 </div>
                 <div className="invoice-party">
                   <h3>수요자</h3>
                   <p className="party-name">{invoice.hospitalName}</p>
-                  <p className="party-info">{invoice.hospitalAddress}</p>
+                  <p className="party-info">{invoice.hospitalAddress || '-'}</p>
                 </div>
               </div>
 
@@ -274,7 +248,7 @@ const HospitalInvoice = () => {
             <h3>서명</h3>
             <SignaturePad
               onSave={handleSignatureSave}
-              savedSignature={typeof signature === 'string' && signature.startsWith('data:') ? signature : null}
+              savedSignature={typeof signature === 'string' ? signature : null}
             />
             {signatureSaving && (
               <p style={{ fontSize: 13, color: '#475BE8', marginTop: 8 }}>서명 저장 중...</p>
@@ -391,6 +365,30 @@ const HospitalInvoice = () => {
                    invoice.status === 'disputed' ? '이의신청' : invoice.status}
                 </span>
               </div>
+              {invoice.statusChangedAt && (
+                <div className="info-item">
+                  <span className="info-label">최종 처리 시각</span>
+                  <span className="info-value">{format(new Date(invoice.statusChangedAt), 'yyyy-MM-dd HH:mm')}</span>
+                </div>
+              )}
+              {invoice.processedByHospitalId && (
+                <div className="info-item">
+                  <span className="info-label">처리자 병원 ID</span>
+                  <span className="info-value">{invoice.processedByHospitalId}</span>
+                </div>
+              )}
+              {invoice.disputeType && (
+                <div className="info-item">
+                  <span className="info-label">이의 유형</span>
+                  <span className="info-value">{invoice.disputeType}</span>
+                </div>
+              )}
+              {invoice.disputeMemo && (
+                <div className="info-item">
+                  <span className="info-label">이의 메모</span>
+                  <span className="info-value">{invoice.disputeMemo}</span>
+                </div>
+              )}
               {invoice.version > 1 && (
                 <div className="info-item">
                   <span className="info-label">버전</span>
@@ -399,28 +397,6 @@ const HospitalInvoice = () => {
               )}
             </div>
 
-            {/* 수정 명세서 히스토리 */}
-            {invoice.revisionHistory && invoice.revisionHistory.length > 0 && (
-              <div className="revision-history">
-                <h4 style={{ marginTop: '20px', marginBottom: '12px', fontSize: '14px', fontWeight: 600 }}>
-                  수정 이력
-                </h4>
-                {invoice.revisionHistory.map((history, idx) => (
-                  <div key={idx} className="revision-history-item">
-                    <div className="revision-version">v{history.version}</div>
-                    <div className="revision-details">
-                      <div className="revision-date">{format(new Date(history.date), 'yyyy-MM-dd')}</div>
-                      <div className="revision-status status-{history.status}">
-                        {history.status === 'disputed' ? '이의신청' : history.status}
-                      </div>
-                      {history.disputeReason && (
-                        <div className="revision-reason">사유: {history.disputeReason}</div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       </div>

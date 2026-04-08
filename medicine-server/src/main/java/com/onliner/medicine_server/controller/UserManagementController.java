@@ -7,6 +7,7 @@ import com.onliner.medicine_server.repository.VendorUserRepository;
 import io.jsonwebtoken.Claims;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.Nullable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.context.annotation.Profile;
@@ -15,6 +16,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Profile("!render-nodb")
@@ -37,7 +39,7 @@ public class UserManagementController {
     // 업체 내 사용자 목록 조회 (MASTER만 가능)
     @GetMapping
     public ResponseEntity<List<Map<String, Object>>> getUsers(Authentication auth) {
-        Claims claims = (Claims) auth.getDetails();
+        Claims claims = requireClaims(auth);
         String companyCode = claims.get("companyCode", String.class);
         String permission = claims.get("permission", String.class);
 
@@ -60,7 +62,7 @@ public class UserManagementController {
     // 신규 계정 생성 (MASTER만 가능)
     @PostMapping
     public ResponseEntity<Map<String, Object>> createUser(@RequestBody Map<String, String> body, Authentication auth) {
-        Claims claims = (Claims) auth.getDetails();
+        Claims claims = requireClaims(auth);
         String companyCode = claims.get("companyCode", String.class);
         String permission = claims.get("permission", String.class);
         String companyName = claims.get("companyName", String.class);
@@ -89,21 +91,20 @@ public class UserManagementController {
                 .active(true)
                 .requiresPasswordChange(true)
                 .build();
-        userRepository.save(user);
+        User savedUser = Objects.requireNonNull(userRepository.save(user));
 
-        VendorUser vendorUser = VendorUser.builder()
-                .user(user)
-                .companyCode(companyCode)
-                .companyName(companyName != null ? companyName : "")
-                .permission(newPermission)
-                .build();
-        vendorUserRepository.save(vendorUser);
+        VendorUser vendorUser = new VendorUser();
+        vendorUser.setUser(savedUser);
+        vendorUser.setCompanyCode(companyCode);
+        vendorUser.setCompanyName(companyName != null ? companyName : "");
+        vendorUser.setPermission(newPermission);
+        VendorUser savedVendorUser = Objects.requireNonNull(vendorUserRepository.save(vendorUser));
 
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
-                "id", user.getId(),
-                "name", user.getName(),
-                "identifier", user.getIdentifier(),
-                "permission", vendorUser.getPermission()
+                "id", savedUser.getId(),
+                "name", savedUser.getName(),
+                "identifier", savedUser.getIdentifier(),
+                "permission", savedVendorUser.getPermission()
         ));
     }
 
@@ -112,7 +113,7 @@ public class UserManagementController {
     public ResponseEntity<Map<String, Object>> updateUser(@PathVariable Long id,
                                                            @RequestBody Map<String, String> body,
                                                            Authentication auth) {
-        Claims claims = (Claims) auth.getDetails();
+        Claims claims = requireClaims(auth);
         String permission = claims.get("permission", String.class);
         String companyCode = claims.get("companyCode", String.class);
 
@@ -120,7 +121,7 @@ public class UserManagementController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "MASTER 권한이 필요합니다.");
         }
 
-        User user = userRepository.findById(id)
+        User user = userRepository.findById(Objects.requireNonNull(id))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
 
         VendorUser vendorUser = vendorUserRepository.findByUser(user)
@@ -131,8 +132,8 @@ public class UserManagementController {
         if (body.containsKey("active")) user.setActive(Boolean.parseBoolean(body.get("active")));
         if (body.containsKey("permission")) vendorUser.setPermission(body.get("permission"));
 
-        userRepository.save(user);
-        vendorUserRepository.save(vendorUser);
+        userRepository.save(Objects.requireNonNull(user));
+        vendorUserRepository.save(Objects.requireNonNull(vendorUser));
 
         return ResponseEntity.ok(Map.of(
                 "id", user.getId(),
@@ -145,7 +146,7 @@ public class UserManagementController {
     // 계정 삭제 (비활성화) - MASTER만 가능
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id, Authentication auth) {
-        Claims claims = (Claims) auth.getDetails();
+        Claims claims = requireClaims(auth);
         String permission = claims.get("permission", String.class);
         String companyCode = claims.get("companyCode", String.class);
 
@@ -153,7 +154,7 @@ public class UserManagementController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "MASTER 권한이 필요합니다.");
         }
 
-        User user = userRepository.findById(id)
+        User user = userRepository.findById(Objects.requireNonNull(id))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
 
         vendorUserRepository.findByUser(user)
@@ -161,7 +162,7 @@ public class UserManagementController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "권한이 없습니다."));
 
         user.setActive(false);
-        userRepository.save(user);
+        userRepository.save(Objects.requireNonNull(user));
 
         return ResponseEntity.noContent().build();
     }
@@ -171,10 +172,9 @@ public class UserManagementController {
     public ResponseEntity<Void> changePassword(@PathVariable Long id,
                                                 @RequestBody Map<String, String> body,
                                                 Authentication auth) {
-        Claims claims = (Claims) auth.getDetails();
         String currentUserIdentifier = (String) auth.getPrincipal();
 
-        User user = userRepository.findById(id)
+        User user = userRepository.findById(Objects.requireNonNull(id))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
 
         if (!user.getIdentifier().equals(currentUserIdentifier)) {
@@ -196,8 +196,24 @@ public class UserManagementController {
 
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setRequiresPasswordChange(false);
-        userRepository.save(user);
+        userRepository.save(Objects.requireNonNull(user));
 
         return ResponseEntity.noContent().build();
+    }
+
+    @Nullable
+    private Claims extractClaims(Authentication auth) {
+        if (auth != null && auth.getDetails() instanceof Claims claims) {
+            return claims;
+        }
+        return null;
+    }
+
+    private Claims requireClaims(Authentication auth) {
+        Claims claims = extractClaims(auth);
+        if (claims == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "인증 정보가 없습니다.");
+        }
+        return claims;
     }
 }

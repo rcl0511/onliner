@@ -59,16 +59,11 @@ public class MockVendorClientController {
     @GetMapping("/{id}")
     public ResponseEntity<Map<String, Object>> getClientById(@PathVariable Long id) {
         List<Map<String, Object>> clients = getMockClients();
-        Map<String, Object> client = clients.stream()
+        return clients.stream()
             .filter(c -> c.get("id").equals(id))
             .findFirst()
-            .orElse(null);
-        
-        if (client == null) {
-            return ResponseEntity.notFound().build();
-        }
-        
-        return ResponseEntity.ok(client);
+            .map(ResponseEntity::ok)
+            .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping

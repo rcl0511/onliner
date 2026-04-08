@@ -55,16 +55,11 @@ public class MockMedicineController {
     @GetMapping("/{id}")
     public ResponseEntity<Map<String, Object>> getMedicineById(@PathVariable Long id) {
         List<Map<String, Object>> medicines = getMockMedicines();
-        Map<String, Object> medicine = medicines.stream()
+        return medicines.stream()
             .filter(m -> m.get("id").equals(id))
             .findFirst()
-            .orElse(null);
-        
-        if (medicine == null) {
-            return ResponseEntity.notFound().build();
-        }
-        
-        return ResponseEntity.ok(medicine);
+            .map(ResponseEntity::ok)
+            .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import notificationService from '../services/notificationService';
-import invoiceStatusService from '../services/invoiceStatusService';
+import { fetchHospitalInvoices } from '../services/invoiceRecordService';
 import '../css/HospitalInbox.css';
 
 const HospitalInbox = () => {
@@ -13,118 +13,32 @@ const HospitalInbox = () => {
   const [filterDate, setFilterDate] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
-
-  const applyStatuses = (list) => {
-    const statusMap = invoiceStatusService.getAll();
-    return list.map((inv) => ({
-      ...inv,
-      status: statusMap[inv.id] || inv.status,
-    }));
-  };
-
-  // 임시 데이터 (실제로는 API에서 가져옴)
-  useEffect(() => {
-    const mockInvoices = [
-      {
-        id: 'INV-2024-001',
-        vendorName: 'DH약품',
-        vendorCode: 'dh-pharm',
-        date: '2024-01-15',
-        totalAmount: 1250000,
-        status: 'unread', // unread, confirmed, disputed, revised
-        items: 15,
-        version: 1,
-        parentInvoiceId: null
-      },
-      {
-        id: 'INV-2024-002',
-        vendorName: '서울제약',
-        vendorCode: 'seoul-pharm',
-        date: '2024-01-14',
-        totalAmount: 980000,
-        status: 'unread',
-        items: 12,
-        version: 1,
-        parentInvoiceId: null
-      },
-      {
-        id: 'INV-2024-003',
-        vendorName: 'DH약품',
-        vendorCode: 'dh-pharm',
-        date: '2024-01-13',
-        totalAmount: 2100000,
-        status: 'confirmed',
-        items: 25,
-        version: 1,
-        parentInvoiceId: null
-      },
-      {
-        id: 'INV-2024-004',
-        vendorName: '대한제약',
-        vendorCode: 'daehan-pharm',
-        date: '2024-01-12',
-        totalAmount: 750000,
-        status: 'disputed',
-        items: 8,
-        version: 1,
-        parentInvoiceId: null
-      },
-      {
-        id: 'INV-2024-004-v2',
-        vendorName: '대한제약',
-        vendorCode: 'daehan-pharm',
-        date: '2024-01-13',
-        totalAmount: 820000,
-        status: 'unread',
-        items: 10,
-        version: 2,
-        parentInvoiceId: 'INV-2024-004',
-        revisionNote: '수량 및 품목 수정'
-      },
-    ];
-
-    const withStatuses = applyStatuses(mockInvoices);
-
-    setInvoices(withStatuses);
-    setFilteredInvoices(withStatuses);
-    const unread = withStatuses.filter(inv => inv.status === 'unread').length;
-    setUnreadCount(unread);
-
-    // 알림 권한 요청
-    notificationService.init();
-
-    // 새 명세서 시뮬레이션 (실제로는 WebSocket 또는 폴링)
-    // 주석 해제하여 테스트 가능
-    // setTimeout(() => {
-    //   notificationService.notifyNewInvoice('INV-2024-005', '신규제약');
-    // }, 5000);
-  }, []);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    const onStorage = (event) => {
-      if (event.key === "invoice_statuses") {
-        setInvoices((prev) => {
-          const next = applyStatuses(prev);
-          setFilteredInvoices(next);
-          const unread = next.filter(inv => inv.status === 'unread').length;
-          setUnreadCount(unread);
-          return next;
-        });
+    const loadInvoices = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const data = await fetchHospitalInvoices();
+        setInvoices(data);
+      } catch (err) {
+        setError(err.message || '명세서 목록을 불러오지 못했습니다.');
+      } finally {
+        setLoading(false);
       }
     };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+
+    notificationService.init();
+    loadInvoices();
   }, []);
 
   useEffect(() => {
     const refreshOnFocus = () => {
-      setInvoices((prev) => {
-        const next = applyStatuses(prev);
-        setFilteredInvoices(next);
-        const unread = next.filter(inv => inv.status === 'unread').length;
-        setUnreadCount(unread);
-        return next;
-      });
+      fetchHospitalInvoices()
+        .then((data) => setInvoices(data))
+        .catch(() => {});
     };
     window.addEventListener("focus", refreshOnFocus);
     return () => window.removeEventListener("focus", refreshOnFocus);
@@ -159,18 +73,21 @@ const HospitalInbox = () => {
     if (searchQuery) {
       filtered = filtered.filter(inv => 
         inv.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        inv.vendorName.toLowerCase().includes(searchQuery.toLowerCase())
+        (inv.vendorName || '').toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
     setFilteredInvoices(filtered);
+    setUnreadCount(invoices.filter(inv => inv.status === 'unread').length);
   }, [invoices, filterVendor, filterDate, searchQuery]);
 
   const handleInvoiceClick = (invoiceId) => {
     navigate(`/hospital/invoice/${invoiceId}`);
   };
 
-  const vendors = [...new Set(invoices.map(inv => ({ code: inv.vendorCode, name: inv.vendorName })))];
+  const vendors = Array.from(
+    new Map(invoices.map((inv) => [inv.vendorCode, { code: inv.vendorCode, name: inv.vendorName }])).values()
+  );
 
   return (
     <div className="hospital-inbox">
@@ -227,6 +144,16 @@ const HospitalInbox = () => {
 
       {/* 명세서 리스트 */}
       <div className="inbox-list">
+        {loading ? (
+          <div className="inbox-empty">
+            <p>명세서 목록을 불러오는 중입니다.</p>
+          </div>
+        ) : error ? (
+          <div className="inbox-empty">
+            <p>{error}</p>
+          </div>
+        ) : (
+        <>
         {filteredInvoices.length === 0 ? (
           <div className="inbox-empty">
             <p>명세서가 없습니다.</p>
@@ -260,7 +187,7 @@ const HospitalInbox = () => {
                 <div className="inbox-item-info">
                   <span className="inbox-item-vendor">{invoice.vendorName}</span>
                   <span className="inbox-item-date">{format(new Date(invoice.date), 'yyyy년 MM월 dd일')}</span>
-                  <span className="inbox-item-items">{invoice.items}개 품목</span>
+                  <span className="inbox-item-items">{invoice.itemsCount}개 품목</span>
                 </div>
                 
                 <div className="inbox-item-footer">
@@ -292,6 +219,8 @@ const HospitalInbox = () => {
               </div>
             </div>
           ))
+        )}
+        </>
         )}
       </div>
     </div>

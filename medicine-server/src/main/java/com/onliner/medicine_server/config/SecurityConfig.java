@@ -41,7 +41,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/api/auth/**", "/healthz/**", "/ws/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+                        .requestMatchers("/healthz/**", "/ws/**").permitAll()
                         .requestMatchers("/exports/**", "/uploads/**").permitAll()
                         .requestMatchers("/api/users/**").hasRole("VENDOR")
                         .requestMatchers("/api/vendors/**").hasRole("VENDOR")
@@ -51,6 +52,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/invoices/upload**").hasRole("VENDOR")
                         .requestMatchers(HttpMethod.POST, "/api/invoices/*/signature").hasRole("HOSPITAL")
                         .requestMatchers(HttpMethod.GET, "/api/invoices/*/signature").authenticated()
+                        // 명세서 관리
+                        .requestMatchers(HttpMethod.POST, "/api/invoice-records").hasRole("VENDOR")
+                        .requestMatchers(HttpMethod.GET, "/api/invoice-records/vendor").hasRole("VENDOR")
+                        .requestMatchers(HttpMethod.GET, "/api/invoice-records/hospital").hasRole("HOSPITAL")
+                        .requestMatchers(HttpMethod.PUT, "/api/invoice-records/*/status").hasRole("HOSPITAL")
+                        .requestMatchers(HttpMethod.GET, "/api/invoice-records/*").authenticated()
+                        // 주문 관리
                         .requestMatchers(HttpMethod.POST, "/api/orders").hasRole("HOSPITAL")
                         .requestMatchers(HttpMethod.GET, "/api/orders").hasRole("VENDOR")
                         .requestMatchers(HttpMethod.PUT, "/api/orders/*/status").hasRole("VENDOR")

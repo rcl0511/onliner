@@ -22,6 +22,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.Base64;
+import java.util.Objects;
 
 @Profile("!render-nodb")
 @RestController
@@ -111,7 +112,7 @@ public class PaymentController {
                 .amount(amount)
                 .status("PENDING")
                 .build();
-        paymentRepository.save(payment);
+        paymentRepository.save(Objects.requireNonNull(payment));
 
         return ResponseEntity.ok(Map.of("orderId", orderId, "amount", amount));
     }
@@ -165,7 +166,7 @@ public class PaymentController {
                 payment.setStatus("PAID");
                 payment.setPaymentKey(paymentKey);
                 payment.setApprovedAt(LocalDateTime.now());
-                paymentRepository.save(payment);
+                paymentRepository.save(Objects.requireNonNull(payment));
             });
 
             return ResponseEntity.ok(Map.of("status", "PAID", "orderId", orderId));

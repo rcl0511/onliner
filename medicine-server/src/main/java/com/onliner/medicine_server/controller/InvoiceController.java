@@ -2,7 +2,10 @@ package com.onliner.medicine_server.controller;
 
 import com.onliner.medicine_server.service.SupabaseStorageService;
 import com.onliner.medicine_server.util.PdfUtil;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -24,10 +27,16 @@ public class InvoiceController {
 
     @GetMapping("/exports/{filename:.+}")
     public ResponseEntity<?> downloadPdf(@PathVariable String filename) {
-        String publicUrl = storageService.getPublicUrl(filename);
-        return ResponseEntity.status(HttpStatus.FOUND)
-                .header("Location", publicUrl)
-                .build();
+        try {
+            byte[] pdfBytes = storageService.downloadFile(filename);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                    .body(new ByteArrayResource(pdfBytes));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "PDF 다운로드 실패", "detail", e.getMessage()));
+        }
     }
 
     @PostMapping("/upload")
@@ -52,21 +61,19 @@ public class InvoiceController {
             String finalFilename = safeHosp + "_" + orderDate + ".pdf";
 
             outputFile = File.createTempFile("output_", ".pdf");
-            String publicUrl;
             try {
                 String templatePath = Objects.requireNonNull(
                     getClass().getClassLoader().getResource("templates/거래명세서_양식.pdf")
                 ).getPath();
                 PdfUtil.overlayTemplate(templatePath, tempFile.getAbsolutePath(), outputFile.getAbsolutePath());
-                publicUrl = storageService.uploadPdf(Files.readAllBytes(outputFile.toPath()), finalFilename);
+                storageService.uploadPdf(Files.readAllBytes(outputFile.toPath()), finalFilename);
             } catch (Exception e) {
-                publicUrl = storageService.uploadPdf(Files.readAllBytes(tempFile.toPath()), finalFilename);
+                storageService.uploadPdf(Files.readAllBytes(tempFile.toPath()), finalFilename);
             }
 
             return ResponseEntity.ok(Map.of(
                 "message", "성공",
                 "pdfUrl", "/api/invoices/exports/" + finalFilename,
-                "publicUrl", publicUrl,
                 "parsedText", parsedText
             ));
 
@@ -105,21 +112,19 @@ public class InvoiceController {
                 String finalFilename = safeHosp + "_" + orderDate + "_" + System.currentTimeMillis() + ".pdf";
 
                 outputFile = File.createTempFile("output_", ".pdf");
-                String publicUrl;
                 try {
                     String templatePath = Objects.requireNonNull(
                         getClass().getClassLoader().getResource("templates/거래명세서_양식.pdf")
                     ).getPath();
                     PdfUtil.overlayTemplate(templatePath, tempFile.getAbsolutePath(), outputFile.getAbsolutePath());
-                    publicUrl = storageService.uploadPdf(Files.readAllBytes(outputFile.toPath()), finalFilename);
+                    storageService.uploadPdf(Files.readAllBytes(outputFile.toPath()), finalFilename);
                 } catch (Exception e) {
-                    publicUrl = storageService.uploadPdf(Files.readAllBytes(tempFile.toPath()), finalFilename);
+                    storageService.uploadPdf(Files.readAllBytes(tempFile.toPath()), finalFilename);
                 }
 
                 Map<String, String> result = new HashMap<>();
                 result.put("originalName", originalName);
                 result.put("pdfUrl", "/api/invoices/exports/" + finalFilename);
-                result.put("publicUrl", publicUrl);
                 result.put("parsedText", parsedText);
                 result.put("pdfFileName", finalFilename);
                 results.add(result);
