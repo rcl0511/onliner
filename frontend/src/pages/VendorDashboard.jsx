@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import authStorage from '../services/authStorage';
-import API_BASE from '../api/baseUrl';
 import '../css/VendorDashboard.css';
 import '../css/common.css';
+import { fetchVendorOrders } from "../services/orderService";
+import { fetchVendorDashboard } from "../services/dashboardService";
 
 const VendorDashboard = () => {
     const navigate = useNavigate();
@@ -14,15 +14,9 @@ const VendorDashboard = () => {
     const [unconfirmedInvoices, setUnconfirmedInvoices] = useState(0);
 
     useEffect(() => {
-        const token = authStorage.getToken();
-
         const loadRecentOrders = async () => {
             try {
-                const res = await fetch(`${API_BASE}/api/orders`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-                if (!res.ok) return [];
-                const data = await res.json();
+                const data = await fetchVendorOrders();
                 return data.map((order) => ({
                     id: order.id,
                     client: order.hospitalName || '병원',
@@ -38,13 +32,11 @@ const VendorDashboard = () => {
         const loadDashboard = async () => {
             try {
                 const [dashboardRes, recentOrders] = await Promise.all([
-                    fetch(`${API_BASE}/api/dashboard/vendor`, {
-                        headers: { Authorization: `Bearer ${token}` },
-                    }),
+                    fetchVendorDashboard(),
                     loadRecentOrders(),
                 ]);
 
-                const data = dashboardRes.ok ? await dashboardRes.json() : {};
+                const data = dashboardRes || {};
                 setTodaySales(data.todaySales || {});
                 setDeliveryStats(data.deliveryStats || {});
                 setLowStockItems(data.lowStockItems || []);

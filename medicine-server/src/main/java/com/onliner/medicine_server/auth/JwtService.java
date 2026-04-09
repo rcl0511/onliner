@@ -36,7 +36,9 @@ public class JwtService {
         claims.put("role", user.role());
         if (user.permission() != null) claims.put("permission", user.permission());
         if (user.companyCode() != null) claims.put("companyCode", user.companyCode());
+        if (user.companyName() != null) claims.put("companyName", user.companyName());
         if (user.hospitalId() != null) claims.put("hospitalId", user.hospitalId());
+        if (user.hospitalName() != null) claims.put("hospitalName", user.hospitalName());
         if (user.phone() != null) claims.put("phone", user.phone());
         if (user.email() != null) claims.put("email", user.email());
 

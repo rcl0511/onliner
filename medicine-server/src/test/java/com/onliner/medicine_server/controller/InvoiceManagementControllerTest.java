@@ -2,6 +2,7 @@ package com.onliner.medicine_server.controller;
 
 import com.onliner.medicine_server.entity.InvoiceRecord;
 import com.onliner.medicine_server.repository.InvoiceRecordRepository;
+import com.onliner.medicine_server.service.InvoiceRecordService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import org.junit.jupiter.api.Test;
@@ -29,7 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = InvoiceManagementController.class)
-@Import(InvoiceManagementControllerTest.TestSecurityConfig.class)
+@Import({InvoiceManagementControllerTest.TestSecurityConfig.class, InvoiceRecordService.class})
 class InvoiceManagementControllerTest {
 
     @Autowired

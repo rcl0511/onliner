@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../css/VendorLogin.css';
 import authStorage from "../services/authStorage";
-import API_BASE from "../api/baseUrl";
+import { loginVendor } from "../services/authService";
 const VendorLogin = () => {
   const navigate = useNavigate();
   const [companyCode, setCompanyCode] = useState('dh-pharm');
@@ -25,23 +25,11 @@ const VendorLogin = () => {
       return;
     }
 
-    fetch(`${API_BASE}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        role: 'vendor',
-        companyCode: finalCompanyCode,
-        email: email.trim(),
-        password,
-      }),
+    loginVendor({
+      companyCode: finalCompanyCode,
+      email: email.trim(),
+      password,
     })
-      .then(async (res) => {
-        if (!res.ok) {
-          const msg = await res.text();
-          throw new Error(msg || '로그인 실패');
-        }
-        return res.json();
-      })
       .then((data) => {
         authStorage.setUser(data.user);
         authStorage.setToken(data.token);

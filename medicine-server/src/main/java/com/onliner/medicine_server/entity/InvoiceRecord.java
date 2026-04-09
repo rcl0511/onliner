@@ -82,4 +82,14 @@ public class InvoiceRecord {
 
     @Column(name = "dispute_memo", columnDefinition = "TEXT")
     private String disputeMemo;
+
+    @Column(name = "version", nullable = false)
+    @Builder.Default
+    private Integer version = 1;
+
+    @Column(name = "parent_invoice_id", length = 100)
+    private String parentInvoiceId;
+
+    @Column(name = "revision_note", columnDefinition = "TEXT")
+    private String revisionNote;
 }

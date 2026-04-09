@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import "../css/HospitalOrder.css";
 import authStorage from "../services/authStorage";
-import API_BASE from "../api/baseUrl";
 import { fetchAllMedicines } from "../api/medicineApi";
+import { createOrder } from "../services/orderService";
 
 const vendorOptions = [
   { code: "dh-pharm", name: "DH약품" },
@@ -102,9 +102,7 @@ export default function HospitalOrder() {
     }
 
     const user = authStorage.getUser();
-    const token = authStorage.getToken();
     const orderData = {
-      id: `ORDER-${Date.now()}`,
       vendorCode,
       vendorName: vendorOptions.find((v) => v.code === vendorCode)?.name || "도매업체",
       hospitalId: user.hospitalId || "",
@@ -115,20 +113,7 @@ export default function HospitalOrder() {
 
     setSubmitting(true);
     try {
-      const res = await fetch(`${API_BASE}/api/orders`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(orderData),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "주문 전송에 실패했습니다.");
-      }
-
+      await createOrder(orderData);
       setSubmitMessage("주문서가 전송되었습니다.");
       setItems([{ name: "", spec: "", quantity: 1, unit: "", unitPrice: 0 }]);
     } catch (err) {

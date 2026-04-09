@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import authStorage from '../services/authStorage';
-import API_BASE from '../api/baseUrl';
 import '../css/HospitalPayment.css';
+import { createPaymentOrder, fetchHospitalPayments } from "../services/paymentService";
 
 const STATUS_LABEL = { unpaid: '미결제', partial: '부분입금', paid: '완료', pending: '대기' };
 const STATUS_CLASS = { unpaid: 'unpaid', partial: 'partial', paid: 'paid', pending: 'unpaid' };
@@ -13,21 +13,12 @@ export default function HospitalPayment() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [loading, setLoading] = useState(true);
   const user = authStorage.getUser();
-  const token = authStorage.getToken();
-
   const loadPaymentData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/payments/hospital`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setSummary(data.summary);
-        setPayments(data.payments || []);
-      } else {
-        throw new Error();
-      }
+      const data = await fetchHospitalPayments();
+      setSummary(data.summary);
+      setPayments(data.payments || []);
     } catch {
       // fallback mock 데이터 (API 미연결 시)
       setSummary({ totalUnpaid: 0, monthlyExpected: 0, paidAmount: 0, overdueAmount: 0 });
@@ -35,7 +26,7 @@ export default function HospitalPayment() {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => {
     loadPaymentData();
@@ -50,16 +41,10 @@ export default function HospitalPayment() {
 
     try {
       // 결제 생성 (서버에 orderId 발급)
-      const createRes = await fetch(`${API_BASE}/api/payments/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ invoiceRef: payment.id || payment.invoiceRef, amount: payment.amount }),
+      const { orderId, amount } = await createPaymentOrder({
+        invoiceRef: payment.id || payment.invoiceRef,
+        amount: payment.amount,
       });
-      if (!createRes.ok) {
-        const errData = await createRes.json().catch(() => ({}));
-        throw new Error(errData.message || '결제 주문 생성에 실패했습니다.');
-      }
-      const { orderId, amount } = await createRes.json();
 
       // 토스페이먼츠 SDK 동적 로드
       if (!window.TossPayments) {

@@ -74,6 +74,7 @@ const normalizeInvoice = (record = {}) => {
     status: mapStatusToUi(record.status),
     version: Number(record.version || 1),
     parentInvoiceId: record.parentInvoiceId || null,
+    revisionNote: record.revisionNote || record.note || "",
   };
 };
 

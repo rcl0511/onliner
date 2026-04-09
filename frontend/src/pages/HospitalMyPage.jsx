@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import '../css/HospitalMyPage.css';
-import API_BASE from "../api/baseUrl";
 import authStorage from "../services/authStorage";
-import authFetch from "../api/authFetch";
+import { changePassword } from "../services/authService";
 import { fetchHospitalInvoices } from "../services/invoiceRecordService";
 
 const HospitalMyPage = () => {
@@ -51,15 +50,8 @@ const HospitalMyPage = () => {
       return;
     }
 
-    authFetch(`${API_BASE}/api/auth/password`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ currentPassword, newPassword }),
-    })
-      .then(async (res) => {
-        if (!res.ok) {
-          throw new Error((await res.text()) || '비밀번호 변경에 실패했습니다.');
-        }
+    changePassword({ currentPassword, newPassword })
+      .then(() => {
         alert('비밀번호가 변경되었습니다.');
         setShowPasswordChange(false);
         setCurrentPassword('');

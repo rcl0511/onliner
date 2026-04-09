@@ -1,29 +1,24 @@
 package com.onliner.medicine_server.controller;
 
 import com.onliner.medicine_server.entity.Order;
-import com.onliner.medicine_server.repository.OrderRepository;
+import com.onliner.medicine_server.service.OrderService;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.Nullable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/orders")
 @RequiredArgsConstructor
 public class OrderController {
 
-    private final OrderRepository orderRepository;
+    private final OrderService orderService;
 
     /**
      * POST /api/orders
@@ -31,36 +26,7 @@ public class OrderController {
      */
     @PostMapping
     public ResponseEntity<?> createOrder(@RequestBody Map<String, Object> body) {
-        Claims claims = extractClaims();
-
-        String hospitalId = claims != null ? claims.get("hospitalId", String.class) : null;
-        String hospitalName = claims != null ? claims.get("hospitalName", String.class) : null;
-
-        String id = "ORDER-" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase();
-        String vendorCode = (String) body.get("vendorCode");
-        String vendorName = (String) body.get("vendorName");
-        String itemsJson = body.containsKey("items") ? body.get("items").toString() : "[]";
-        Object totalAmountRaw = body.get("totalAmount");
-        long totalAmount = totalAmountRaw instanceof Number n ? n.longValue() : 0L;
-
-        if (vendorCode == null || vendorCode.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "vendorCode가 필요합니다."));
-        }
-
-        Order order = Order.builder()
-                .id(id)
-                .vendorCode(vendorCode)
-                .vendorName(vendorName != null ? vendorName : "")
-                .hospitalId(hospitalId != null ? hospitalId : "")
-                .hospitalName(hospitalName != null ? hospitalName : (String) body.getOrDefault("hospitalName", ""))
-                .totalAmount(totalAmount)
-                .status("PENDING")
-                .items(itemsJson)
-                .createdAt(Instant.now())
-                .build();
-
-        orderRepository.save(Objects.requireNonNull(order));
-        return ResponseEntity.ok(Map.of("message", "주문이 접수되었습니다.", "orderId", id));
+        return ResponseEntity.ok(orderService.createOrder(body, extractClaims()));
     }
 
     /**
@@ -69,19 +35,7 @@ public class OrderController {
      */
     @GetMapping
     public ResponseEntity<List<Order>> getOrders(@RequestParam(required = false) String vendorCode) {
-        Claims claims = extractClaims();
-        String code = vendorCode;
-
-        // vendorCode 파라미터가 없으면 토큰에서 추출
-        if ((code == null || code.isBlank()) && claims != null) {
-            code = claims.get("companyCode", String.class);
-        }
-
-        if (code == null || code.isBlank()) {
-            return ResponseEntity.ok(List.of());
-        }
-
-        return ResponseEntity.ok(orderRepository.findByVendorCodeOrderByCreatedAtDesc(code));
+        return ResponseEntity.ok(orderService.getVendorOrders(vendorCode, extractClaims()));
     }
 
     /**
@@ -93,23 +47,7 @@ public class OrderController {
             @PathVariable String id,
             @RequestBody Map<String, String> body
     ) {
-        String newStatus = body.get("status");
-        if (newStatus == null || (!newStatus.equals("ACCEPTED") && !newStatus.equals("REJECTED"))) {
-            return ResponseEntity.badRequest().body(Map.of("error", "status는 ACCEPTED 또는 REJECTED여야 합니다."));
-        }
-
-        Optional<Order> opt = orderRepository.findById(Objects.requireNonNull(id));
-        if (opt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "주문을 찾을 수 없습니다."));
-        }
-
-        Order order = opt.get();
-        if (!"PENDING".equals(order.getStatus())) {
-            return ResponseEntity.badRequest().body(Map.of("error", "이미 처리된 주문입니다. (현재 상태: " + order.getStatus() + ")"));
-        }
-        order.setStatus(newStatus);
-        orderRepository.save(Objects.requireNonNull(order));
-        return ResponseEntity.ok(Map.of("message", "상태가 변경되었습니다.", "status", newStatus));
+        return ResponseEntity.ok(orderService.updateStatus(id, body.get("status"), extractClaims()));
     }
 
     @Nullable

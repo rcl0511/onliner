@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onliner.medicine_server.repository.ChatMessageRepository;
 import com.onliner.medicine_server.auth.JwtService;
 import com.onliner.medicine_server.entity.ChatMessage;
+import com.onliner.medicine_server.service.ChatRoomAccessService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import org.springframework.beans.factory.ObjectProvider;
@@ -38,11 +39,17 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final Map<String, Set<WebSocketSession>> rooms = new ConcurrentHashMap<>();
     private final Map<WebSocketSession, Set<String>> sessionRooms = new ConcurrentHashMap<>();
     private final JwtService jwtService;
+    private final ChatRoomAccessService chatRoomAccessService;
 
     private final Optional<ChatMessageRepository> chatMessageRepository;
 
-    public ChatWebSocketHandler(JwtService jwtService, ObjectProvider<ChatMessageRepository> chatMessageRepositoryProvider) {
+    public ChatWebSocketHandler(
+            JwtService jwtService,
+            ChatRoomAccessService chatRoomAccessService,
+            ObjectProvider<ChatMessageRepository> chatMessageRepositoryProvider
+    ) {
         this.jwtService = jwtService;
+        this.chatRoomAccessService = chatRoomAccessService;
         this.chatMessageRepository = Optional.ofNullable(chatMessageRepositoryProvider.getIfAvailable());
     }
 
@@ -59,6 +66,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             String role = claims.get("role", String.class);
             session.getAttributes().put("userId", subject);
             session.getAttributes().put("role", role);
+            session.getAttributes().put("claims", claims);
         } catch (JwtException ex) {
             session.close(CloseStatus.NOT_ACCEPTABLE.withReason("invalid token"));
             return;
@@ -87,6 +95,10 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         switch (type) {
             case "subscribe" -> {
                 if (!roomId.isBlank()) {
+                    if (!canAccessRoom(session, roomId)) {
+                        session.close(CloseStatus.NOT_ACCEPTABLE.withReason("forbidden room"));
+                        return;
+                    }
                     joinRoom(roomId, session);
                 }
             }
@@ -104,6 +116,10 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             }
             default -> {
                 if (!roomId.isBlank()) {
+                    if (!canAccessRoom(session, roomId)) {
+                        session.close(CloseStatus.NOT_ACCEPTABLE.withReason("forbidden room"));
+                        return;
+                    }
                     String senderId = String.valueOf(session.getAttributes().getOrDefault("userId", "unknown"));
                     data.putIfAbsent("senderId", senderId);
                     data.putIfAbsent("serverTimestamp", Instant.now().toString());
@@ -170,6 +186,14 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private void leaveRoom(String roomId, WebSocketSession session) {
         rooms.getOrDefault(roomId, Collections.emptySet()).remove(session);
         sessionRooms.getOrDefault(session, Collections.emptySet()).remove(roomId);
+    }
+
+    private boolean canAccessRoom(WebSocketSession session, String roomId) {
+        Object claimsObject = session.getAttributes().get("claims");
+        if (!(claimsObject instanceof Claims claims)) {
+            return false;
+        }
+        return chatRoomAccessService.canAccess(roomId, claims);
     }
 
     @Nullable

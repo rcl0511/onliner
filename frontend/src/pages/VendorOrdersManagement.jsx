@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import '../css/VendorOrdersManagement.css';
 import '../css/common.css';
-import authStorage from "../services/authStorage";
-import API_BASE from "../api/baseUrl";
+import { fetchVendorOrders, updateVendorOrderStatus } from "../services/orderService";
 
 const VendorOrdersManagement = () => {
     const [orders, setOrders] = useState([]);
@@ -12,30 +11,16 @@ const VendorOrdersManagement = () => {
     const [selectedOrders, setSelectedOrders] = useState(new Set());
     const [detailOrder, setDetailOrder] = useState(null);
 
-    const token = authStorage.getToken();
-
     const loadOrders = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await fetch(`${API_BASE}/api/orders`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            if (!res.ok) throw new Error();
-            const data = await res.json();
-            // items 필드가 JSON 문자열이면 파싱
-            const parsed = data.map((o) => ({
-                ...o,
-                items: typeof o.items === 'string' ? (() => { try { return JSON.parse(o.items); } catch { return []; } })() : (o.items || []),
-                total: o.totalAmount || 0,
-                client: o.hospitalName || '병원',
-            }));
-            setOrders(parsed);
+            setOrders(await fetchVendorOrders());
         } catch {
             setOrders([]);
         } finally {
             setLoading(false);
         }
-    }, [token]);
+    }, []);
 
     useEffect(() => {
         loadOrders();
@@ -58,17 +43,9 @@ const VendorOrdersManagement = () => {
         setSelectedOrders(next);
     };
 
-    const updateOrderStatus = async (orderId, status) => {
+    const handleUpdateOrderStatus = async (orderId, status) => {
         try {
-            const res = await fetch(`${API_BASE}/api/orders/${orderId}/status`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({ status }),
-            });
-            if (!res.ok) throw new Error();
+            await updateVendorOrderStatus(orderId, status);
             setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status } : o)));
         } catch {
             alert('상태 변경에 실패했습니다.');
@@ -132,7 +109,7 @@ const VendorOrdersManagement = () => {
                         <button
                             className="btn-small"
                             onClick={() => {
-                                selectedOrders.forEach((id) => updateOrderStatus(id, 'ACCEPTED'));
+                                selectedOrders.forEach((id) => handleUpdateOrderStatus(id, 'ACCEPTED'));
                                 setSelectedOrders(new Set());
                             }}
                         >
@@ -236,7 +213,7 @@ const VendorOrdersManagement = () => {
                                         className="btn-outline"
                                         style={{ color: '#EF4444', borderColor: '#EF4444' }}
                                         onClick={() => {
-                                            updateOrderStatus(detailOrder.id, 'REJECTED');
+                                            handleUpdateOrderStatus(detailOrder.id, 'REJECTED');
                                             setDetailOrder(null);
                                         }}
                                     >
@@ -245,7 +222,7 @@ const VendorOrdersManagement = () => {
                                     <button
                                         className="btn-primary"
                                         onClick={() => {
-                                            updateOrderStatus(detailOrder.id, 'ACCEPTED');
+                                            handleUpdateOrderStatus(detailOrder.id, 'ACCEPTED');
                                             setDetailOrder(null);
                                         }}
                                     >

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import authStorage from '../services/authStorage';
-import API_BASE from '../api/baseUrl';
+import { confirmPayment } from "../services/paymentService";
 
 export default function PaymentSuccess() {
   const [searchParams] = useSearchParams();
@@ -20,14 +19,7 @@ export default function PaymentSuccess() {
       return;
     }
 
-    const token = authStorage.getToken();
-
-    fetch(`${API_BASE}/api/payments/confirm`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ paymentKey, orderId, amount }),
-    })
-      .then((res) => (res.ok ? res.json() : res.json().then((d) => Promise.reject(d))))
+    confirmPayment({ paymentKey, orderId, amount })
       .then(() => setStatus('success'))
       .catch((err) => {
         setErrorMsg(err.message || '결제 승인에 실패했습니다.');

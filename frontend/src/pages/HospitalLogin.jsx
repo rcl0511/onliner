@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import '../css/HospitalLogin.css';
 import authStorage from "../services/authStorage";
-import API_BASE from "../api/baseUrl";
+import { changePassword, loginHospital } from "../services/authService";
 
 const HospitalLogin = () => {
   const navigate = useNavigate();
@@ -38,22 +38,11 @@ const HospitalLogin = () => {
     e.preventDefault();
     setError('');
 
-    fetch(`${API_BASE}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role: 'hospital', phone, password }),
-    })
+    loginHospital({ phone, password })
       .then(async (res) => {
-        if (!res.ok) {
-          const msg = await res.text();
-          throw new Error(msg || `로그인 실패 (${res.status})`);
-        }
-        return res.json();
-      })
-      .then((data) => {
-        authStorage.setUser(data.user);
-        authStorage.setToken(data.token);
-        if (data.user?.requiresPasswordChange) {
+        authStorage.setUser(res.user);
+        authStorage.setToken(res.token);
+        if (res.user?.requiresPasswordChange) {
           setShowPasswordChange(true);
         } else {
           navigate('/hospital/inbox');
@@ -80,14 +69,19 @@ const HospitalLogin = () => {
       return;
     }
 
-    // 비밀번호 변경 처리
-    const userInfo = authStorage.getUser();
-    userInfo.requiresPasswordChange = false;
-    authStorage.setUser(userInfo);
-    localStorage.setItem('hospitalPassword', newPassword); // 실제로는 서버에 저장
-    
-    setShowPasswordChange(false);
-    navigate('/hospital/inbox');
+    changePassword({ currentPassword: password, newPassword })
+      .then(() => {
+        const userInfo = authStorage.getUser();
+        authStorage.setUser({ ...userInfo, requiresPasswordChange: false });
+        setShowPasswordChange(false);
+        setPassword(newPassword);
+        setNewPassword('');
+        setConfirmPassword('');
+        navigate('/hospital/inbox');
+      })
+      .catch((err) => {
+        setError(err.message || '비밀번호 변경에 실패했습니다.');
+      });
   };
 
   return (

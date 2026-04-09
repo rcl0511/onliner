@@ -1,20 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from 'date-fns';
-import authStorage from '../services/authStorage';
-import API_BASE from '../api/baseUrl';
 import '../css/HospitalDashboard.css';
+import { fetchHospitalDashboard } from "../services/dashboardService";
 
 export default function HospitalDashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
-    const token = authStorage.getToken();
-    fetch(`${API_BASE}/api/dashboard/hospital`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => (res.ok ? res.json() : Promise.reject()))
+    fetchHospitalDashboard()
       .then((data) => setStats(data))
       .catch(() => {
         setStats({
