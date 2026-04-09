@@ -3,9 +3,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../css/VendorInvoice.css';
 import authStorage from "../services/authStorage";
-import API_BASE from "../api/baseUrl";
-import authFetch from "../api/authFetch";
 import { fetchAllMedicines } from "../api/medicineApi";
+import { downloadInvoicePdf, uploadInvoicePdfs } from "../services/invoiceFileService";
 
 const getTodayDateString = () => {
   return new Date().toISOString().slice(0, 10);
@@ -295,26 +294,8 @@ const VendorInvoice = () => {
       return;
     }
 
-    const formData = new FormData();
-    files.forEach((f) => formData.append('invoices', f));
-
     try {
-      const res = await authFetch(`${API_BASE}/api/invoices/upload-multiple`, {
-        method: 'POST',
-        body: formData,
-      });
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(`서버 오류 ${res.status}\n${errText}`);
-      }
-      const { files: uploaded } = await res.json();
-      const timestamp = Date.now();
-      const withKeys = uploaded.map((f, idx) => ({
-        ...f,
-        key: `auto-${timestamp}-${idx}`,
-        fileName: f.pdfFileName || f.pdfUrl.split('/').pop(),
-      }));
-      setResults(withKeys);
+      setResults(await uploadInvoicePdfs(files));
     } catch (err) {
       console.error('다중 업로드 실패:', err);
       alert(`업로드 중 오류 발생: ${err.message}`);
@@ -355,20 +336,7 @@ const VendorInvoice = () => {
 
   const handleDownloadPdf = async (pdfUrl, filename) => {
     try {
-      const res = await authFetch(`${API_BASE}${pdfUrl}`);
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(errText || "다운로드 실패");
-      }
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename || "invoice.pdf";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      await downloadInvoicePdf(pdfUrl, filename || "invoice.pdf");
     } catch (err) {
       alert(err.message || "다운로드에 실패했습니다.");
     }

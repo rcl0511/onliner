@@ -1,5 +1,5 @@
 import authStorage from "./authStorage";
-import API_BASE from "../api/baseUrl";
+import { http } from "../api/http";
 
 // 서명 서비스 - 명세서별 개별 서명 관리 및 메타데이터 수집
 class SignatureService {
@@ -84,26 +84,10 @@ class SignatureService {
   // 명세서별 서명 저장 (DB + Supabase Storage)
   async saveSignature(invoiceId, signatureData) {
     const metadata = await this.collectMetadata();
-    const token = authStorage.getToken();
-
-    const res = await fetch(`${API_BASE}/api/invoices/${invoiceId}/signature`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
+    const { data: result } = await http.post(`/api/invoices/${invoiceId}/signature`, {
         imageDataUrl: signatureData,
         metadata: JSON.stringify(metadata),
-      }),
     });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || '서명 저장에 실패했습니다.');
-    }
-
-    const result = await res.json();
 
     // 로컬 캐시 (오프라인 fallback 및 빠른 UI 복원)
     const key = `invoice_signature_${invoiceId}`;
@@ -114,23 +98,16 @@ class SignatureService {
 
   // 명세서별 서명 불러오기 (DB 우선, 없으면 로컬 캐시)
   async loadSignature(invoiceId) {
-    const token = authStorage.getToken();
-
     try {
-      const res = await fetch(`${API_BASE}/api/invoices/${invoiceId}/signature`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        let metadata = {};
-        try { metadata = JSON.parse(data.metadata || '{}'); } catch {}
-        return {
-          signatureData: data.imageDataUrl || null,
-          imageUrl: data.imageUrl || data.imageDataUrl || null,
-          metadata,
-          signedAt: data.signedAt,
-        };
-      }
+      const { data } = await http.get(`/api/invoices/${invoiceId}/signature`);
+      let metadata = {};
+      try { metadata = JSON.parse(data.metadata || '{}'); } catch {}
+      return {
+        signatureData: data.imageDataUrl || null,
+        imageUrl: data.imageUrl || data.imageDataUrl || null,
+        metadata,
+        signedAt: data.signedAt,
+      };
     } catch {}
 
     // fallback: 로컬 캐시

@@ -6,9 +6,11 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.mockito.stubbing.Answer;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.util.Objects;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,7 +32,8 @@ class OrderServiceTest {
                 .createdAt(Instant.parse("2026-04-08T00:00:00Z"))
                 .build();
         when(orderRepository.findById("ORDER-1")).thenReturn(Optional.of(order));
-        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(orderRepository.save(any(Order.class))).thenAnswer((Answer<Order>) invocation ->
+                Objects.requireNonNull(invocation.getArgument(0, Order.class)));
 
         var result = orderService.updateStatus("ORDER-1", "ACCEPTED", vendorClaims("dh-pharm"));
 
@@ -74,4 +77,5 @@ class OrderServiceTest {
         claims.put("companyCode", companyCode);
         return claims;
     }
+
 }

@@ -1,6 +1,5 @@
 package com.onliner.medicine_server.controller;
 
-import com.onliner.medicine_server.entity.Payment;
 import com.onliner.medicine_server.service.PaymentService;
 import io.jsonwebtoken.Claims;
 import org.springframework.http.ResponseEntity;

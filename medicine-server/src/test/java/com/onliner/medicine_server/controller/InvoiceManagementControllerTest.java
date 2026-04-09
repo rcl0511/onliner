@@ -95,14 +95,14 @@ class InvoiceManagementControllerTest {
         mockMvc.perform(put("/api/invoice-records/INV-TEST-002/status")
                         .with(Objects.requireNonNull(authentication(TestSecurityConfig.hospitalAuth("hospital-1"))))
                         .contentType(Objects.requireNonNull(MediaType.APPLICATION_JSON))
-                        .content("""
+                .content("""
                                 {
                                   "status": "DISPUTED",
                                   "note": "메모만 있음"
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("이의 신청 시 disputeType과 disputeMemo가 필요합니다."));
+                .andExpect(status().reason("이의 신청 시 disputeType과 disputeMemo가 필요합니다."));
     }
 
     static class TestSecurityConfig {

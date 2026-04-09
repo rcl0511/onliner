@@ -1,7 +1,6 @@
-import API_BASE from "../api/baseUrl";
-import authFetch from "../api/authFetch";
+import { http } from "../api/http";
 
-const BASE_URL = `${API_BASE}/api/invoice-records`;
+const BASE_URL = "/api/invoice-records";
 
 const safeJsonParse = (value, fallback) => {
   if (!value) {
@@ -78,24 +77,8 @@ const normalizeInvoice = (record = {}) => {
   };
 };
 
-const parseError = async (res) => {
-  const data = await res.json().catch(() => null);
-  if (data?.error) {
-    return data.error;
-  }
-  if (data?.message) {
-    return data.message;
-  }
-  return "명세서 요청 중 오류가 발생했습니다.";
-};
-
 export const fetchHospitalInvoices = async () => {
-  const res = await authFetch(`${BASE_URL}/hospital`);
-  if (!res.ok) {
-    throw new Error(await parseError(res));
-  }
-
-  const data = await res.json();
+  const { data } = await http.get(`${BASE_URL}/hospital`);
   return Array.isArray(data) ? data.map(normalizeInvoice) : [];
 };
 
@@ -103,22 +86,12 @@ export const fetchVendorInvoices = async (status = "") => {
   const url = status
     ? `${BASE_URL}/vendor?status=${encodeURIComponent(status)}`
     : `${BASE_URL}/vendor`;
-  const res = await authFetch(url);
-  if (!res.ok) {
-    throw new Error(await parseError(res));
-  }
-
-  const data = await res.json();
+  const { data } = await http.get(url);
   return Array.isArray(data) ? data.map(normalizeInvoice) : [];
 };
 
 export const fetchInvoiceDetail = async (invoiceId) => {
-  const res = await authFetch(`${BASE_URL}/${invoiceId}`);
-  if (!res.ok) {
-    throw new Error(await parseError(res));
-  }
-
-  const data = await res.json();
+  const { data } = await http.get(`${BASE_URL}/${invoiceId}`);
   return normalizeInvoice(data);
 };
 
@@ -130,17 +103,8 @@ export const updateInvoiceStatus = async (invoiceId, status, options = {}) => {
     disputeMemo: options.disputeMemo || "",
   };
 
-  const res = await authFetch(`${BASE_URL}/${invoiceId}/status`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-
-  if (!res.ok) {
-    throw new Error(await parseError(res));
-  }
-
-  return res.json();
+  const { data } = await http.put(`${BASE_URL}/${invoiceId}/status`, payload);
+  return data;
 };
 
 const invoiceRecordService = {

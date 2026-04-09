@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
-import API_BASE from "../api/baseUrl";
-import authFetch from "../api/authFetch";
 import { fetchVendorInvoices } from "../services/invoiceRecordService";
+import { downloadInvoicePdf } from "../services/invoiceFileService";
 import '../css/common.css';
 
 export default function VendorInvoiceSave() {
@@ -51,25 +50,8 @@ export default function VendorInvoiceSave() {
   }, [invoices, statusFilter, searchQuery, dateFilter]);
 
   const handleDownloadPdf = async (pdfUrl, fileName) => {
-    if (!pdfUrl) {
-      return;
-    }
-
     try {
-      const requestUrl = pdfUrl.startsWith('http') ? pdfUrl : `${API_BASE}${pdfUrl}`;
-      const res = await authFetch(requestUrl);
-      if (!res.ok) {
-        throw new Error((await res.text()) || 'PDF 다운로드에 실패했습니다.');
-      }
-      const blob = await res.blob();
-      const objectUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = objectUrl;
-      link.download = fileName || 'invoice.pdf';
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(objectUrl);
+      await downloadInvoicePdf(pdfUrl, fileName || 'invoice.pdf');
     } catch (err) {
       alert(err.message || 'PDF 다운로드에 실패했습니다.');
     }

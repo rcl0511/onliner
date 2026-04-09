@@ -2,8 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import HospitalInvoiceView from '../components/HospitalInvoiceView';
 import signatureService from '../services/signatureService';
-import API_BASE from '../api/baseUrl';
-import authFetch from '../api/authFetch';
+import { downloadInvoicePdf } from '../services/invoiceFileService';
 import { fetchInvoiceDetail, updateInvoiceStatus } from '../services/invoiceRecordService';
 import '../css/HospitalInvoice.css';
 
@@ -105,33 +104,7 @@ const HospitalInvoice = () => {
   };
 
   const handleDownloadPDF = () => {
-    if (!invoice?.pdfUrl) {
-      alert('다운로드 가능한 PDF가 없습니다.');
-      return;
-    }
-
-    const requestUrl = invoice.pdfUrl.startsWith('http')
-      ? invoice.pdfUrl
-      : `${API_BASE}${invoice.pdfUrl}`;
-    const fileName = invoice.pdfUrl.split('/').pop() || `${invoice.id}.pdf`;
-
-    authFetch(requestUrl)
-      .then(async (res) => {
-        if (!res.ok) {
-          throw new Error((await res.text()) || 'PDF 다운로드에 실패했습니다.');
-        }
-        return res.blob();
-      })
-      .then((blob) => {
-        const objectUrl = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = objectUrl;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        window.URL.revokeObjectURL(objectUrl);
-      })
+    downloadInvoicePdf(invoice?.pdfUrl, invoice?.pdfUrl?.split('/').pop() || `${invoice.id}.pdf`)
       .catch((err) => {
         alert(err.message || 'PDF 다운로드에 실패했습니다.');
       });
